@@ -8,10 +8,20 @@ on:
     - cron: '0 10 * * *'
   workflow_dispatch:  # Allow manual trigger from GitHub Actions UI
 
+# Cancel in-progress runs of the same workflow
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   run-screener:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false  # Continue even if one source fails
+      matrix:
+        source: [bei, yahoo]
+    
     env:
       TZ: Asia/Jakarta
 
@@ -21,42 +31,78 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Full history for proper git operations
 
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
+          python-version: '3.12'
           cache: 'pip'
+          cache-dependency-path: 'requirements.txt'
 
       - name: Install dependencies
         run: |
-          python -m pip install --upgrade pip setuptools wheel
+          python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      - name: Clear Python cache
-        run: find . -type d -name __pycache__ -exec rm -rf {} + 2>/dev/null || true
+      - name: Run screener (${{ matrix.source }})
+        run: python main.py --source ${{ matrix.source }} --save
+        timeout-minutes: 12
 
-      - name: Run screener (all BEI stocks)
-        run: python main.py --source bei --save
-        timeout-minutes: 15
+      - name: Verify results
+        run: |
+          echo "Results for ${{ matrix.source }}:"
+          ls -lh data/results/*${{ matrix.source }}* 2>/dev/null || echo "No results found"
 
-      - name: Run screener (all Yahoo stocks)
-        run: python main.py --source yahoo --save
-        timeout-minutes: 15
+      - name: Upload results as artifact
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: screener-results-${{ matrix.source }}
+          path: data/results/
+          retention-days: 90
 
-      - name: Check for results
-        run: ls -la data/results/ || echo "No results directory"
+      - name: Workflow Step Failed
+        if: failure()
+        run: |
+          echo "Screener failed for source: ${{ matrix.source }}"
+          echo "Check logs: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+
+  commit-results:
+    needs: run-screener
+    runs-on: ubuntu-latest
+    if: always()
+    
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts/
+
+      - name: Merge results
+        run: |
+          mkdir -p data/results
+          find artifacts/ -name "*.csv" -exec cp {} data/results/ \;
+          ls -lh data/results/ || echo "No results to merge"
 
       - name: Commit and push results
-        if: success()
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
+          git pull --rebase origin ${{ github.ref_name }}
           git add data/results/ data/bei_stocks.csv data/all_stocks.csv 2>/dev/null || true
-          git diff --staged --quiet || (git commit -m "📊 Screener results $(date +%Y-%m-%d)" && git push) || echo "No changes to commit"
-
-      - name: Workflow Failed Notification
-        if: failure()
-        run: |
-          echo "Screener workflow failed!"
-          echo "Check logs for details: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          if ! git diff --staged --quiet; then
+            git commit -m "📊 Screener results $(date -u +%Y-%m-%d)"
+            git push
+          else
+            echo "No changes to commit"
+          fi
