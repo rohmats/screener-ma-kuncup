@@ -104,36 +104,41 @@ def render_dashboard() -> None:
     )
     st.divider()
 
-    # --- Sidebar parameters ---
-    with st.sidebar:
-        st.markdown("### ⚙️ Parameter Screener")
-
-        range_ticks = st.slider(
-            "Range Ticks Threshold",
-            min_value=1,
-            max_value=20,
-            value=6,
-            step=1,
-            help="Batas maksimum rentang MA dalam satuan tick BEI",
-        )
-        vol_pct = st.slider(
-            "Volatilitas Threshold (%)",
-            min_value=0.5,
-            max_value=10.0,
-            value=3.8,
-            step=0.1,
-            format="%.1f",
-            help="Batas maksimum volatilitas harian rolling 10 hari (%)",
-        )
-        min_volume = st.slider(
-            "Volume Minimum",
-            min_value=0,
-            max_value=10_000_000,
-            value=1_000_000,
-            step=100_000,
-            format="%d",
-            help="Volume minimum untuk sinyal valid",
-        )
+    # --- Parameters ---
+    with st.expander("⚙️ Parameter Screener", expanded=True):
+        col1, col2, col3 = st.columns(3)
+        
+        with col1:
+            range_ticks = st.slider(
+                "Range Ticks Threshold",
+                min_value=1,
+                max_value=20,
+                value=6,
+                step=1,
+                help="Batas maksimum rentang MA dalam satuan tick BEI",
+            )
+        
+        with col2:
+            vol_pct = st.slider(
+                "Volatilitas Threshold (%)",
+                min_value=0.5,
+                max_value=10.0,
+                value=3.8,
+                step=0.1,
+                format="%.1f",
+                help="Batas maksimum volatilitas harian rolling 10 hari (%)",
+            )
+        
+        with col3:
+            min_volume = st.slider(
+                "Volume Minimum",
+                min_value=0,
+                max_value=10_000_000,
+                value=1_000_000,
+                step=100_000,
+                format="%d",
+                help="Volume minimum untuk sinyal valid",
+            )
 
         data_source = st.selectbox(
             "Sumber Data",
@@ -147,16 +152,20 @@ def render_dashboard() -> None:
         else:
             button_label = "🔄 Update saham Yahoo (800-an)"
         
-        refresh_all_stocks = st.button(
-            button_label,
-            use_container_width=True,
-        )
+        col_btn1, col_btn2, col_btn3 = st.columns(3)
+        
+        with col_btn1:
+            refresh_all_stocks = st.button(
+                button_label,
+                use_container_width=True,
+            )
+        
+        with col_btn2:
+            show_signals_only = st.checkbox("Tampilkan hanya sinyal", value=True)
+        
+        with col_btn3:
+            run_button = st.button("🔍 Jalankan Screener", use_container_width=True, type="primary")
 
-        show_signals_only = st.checkbox("Tampilkan hanya sinyal", value=True)
-
-        run_button = st.button("🔍 Jalankan Screener", use_container_width=True, type="primary")
-
-        st.divider()
         st.caption("ℹ️ Data diambil dari Yahoo Finance (yfinance).")
 
     if refresh_all_stocks:

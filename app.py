@@ -6,25 +6,24 @@ st.set_page_config(
     page_title="Screener MA Kuncup",
     page_icon="📊",
     layout="wide",
-    initial_sidebar_state="expanded",
+    initial_sidebar_state="collapsed",
 )
 
 from ui.styles import inject_custom_css
 
 inject_custom_css(st)
 
-# Navigation
-page = st.sidebar.radio(
-    "Navigasi",
-    ["🏠 Dashboard", "📈 Detail Saham", "📅 Riwayat"],
-)
+# Navigation using tabs
+tab1, tab2, tab3 = st.tabs(["🏠 Dashboard", "📈 Detail Saham", "📅 Riwayat"])
 
-if page == "🏠 Dashboard":
+with tab1:
     from ui.pages.dashboard import render_dashboard
     render_dashboard()
-elif page == "📈 Detail Saham":
+
+with tab2:
     from ui.pages.stock_detail import render_stock_detail
     render_stock_detail()
-elif page == "📅 Riwayat":
+
+with tab3:
     from ui.pages.history import render_history
     render_history()
