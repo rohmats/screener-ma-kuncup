@@ -168,7 +168,7 @@ def render_history() -> None:
             file_name=selected_file.name,
             mime="text/csv",
         )
-        st.dataframe(filtered_df, use_container_width=True, hide_index=True)
+        st.dataframe(filtered_df, width='stretch', hide_index=True)
     else:
         st.info("Tidak ada data yang sesuai dengan filter.")
 
@@ -250,7 +250,7 @@ def render_history() -> None:
             legend_title_text="Sumber",
         )
         fig.update_xaxes(type="category", tickangle=0)
-        st.plotly_chart(fig, use_container_width=True)
+        st.plotly_chart(fig, width='stretch')
     else:
         st.info("Tidak cukup data untuk menampilkan tren.")
 

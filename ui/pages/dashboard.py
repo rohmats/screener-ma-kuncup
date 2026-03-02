@@ -119,14 +119,14 @@ def render_dashboard() -> None:
         with col_btn1:
             refresh_all_stocks = st.button(
                 button_label,
-                use_container_width=True,
+                width='stretch',
             )
         
         with col_btn2:
             show_signals_only = st.checkbox("Tampilkan hanya sinyal", value=True)
         
         with col_btn3:
-            run_button = st.button("🔍 Jalankan Screener", use_container_width=True, type="primary")
+            run_button = st.button("🔍 Jalankan Screener", width='stretch', type="primary")
 
         st.caption("ℹ️ Data diambil dari Yahoo Finance (yfinance).")
 
