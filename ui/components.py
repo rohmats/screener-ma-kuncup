@@ -99,8 +99,8 @@ def render_price_chart(df: pd.DataFrame, ticker: str) -> None:
     fig = make_subplots(
         rows=2, cols=1,
         shared_xaxes=True,
-        row_heights=[0.75, 0.25],
-        vertical_spacing=0.05,
+        row_heights=[0.70, 0.30],
+        vertical_spacing=0.03,
         subplot_titles=(f"Harga & Moving Average — {ticker}", "Volume"),
     )
 
@@ -115,7 +115,6 @@ def render_price_chart(df: pd.DataFrame, ticker: str) -> None:
                 low=df["Low"],
                 close=df["Close"],
                 name="OHLC",
-                visible='legendonly',  # Default collapsed
                 increasing_line_color="#26a69a",
                 increasing_fillcolor="#26a69a",
                 decreasing_line_color="#ef5350",
@@ -138,31 +137,31 @@ def render_price_chart(df: pd.DataFrame, ticker: str) -> None:
                 x=df.index,
                 y=df["Close"],
                 name="Close",
-                line=dict(color="#ffffff", width=1.5),
+                line=dict(color="#ffffff", width=2),
                 hovertemplate="<b>%{x|%d-%m-%Y}</b><br>Close: %{y:,.2f}<extra></extra>",
             ),
             row=1,
             col=1,
         )
 
-    # MA lines
+    # MA lines - only show MA5, MA20, MA50 by default
     ma_colors = {
-        "MA3": "#ff6b6b",
-        "MA5": "#ffa500",
-        "MA10": "#ffd700",
-        "MA20": "#7fff00",
-        "MA50": "#00bfff",
-        "MA100": "#da70d6",
+        "MA3": ("#ff6b6b", False),
+        "MA5": ("#ffa500", True),
+        "MA10": ("#ffd700", False),
+        "MA20": ("#7fff00", True),
+        "MA50": ("#00bfff", True),
+        "MA100": ("#da70d6", False),
     }
-    for ma_col, color in ma_colors.items():
+    for ma_col, (color, visible) in ma_colors.items():
         if ma_col in df.columns:
             fig.add_trace(
                 go.Scatter(
                     x=df.index, y=df[ma_col],
                     name=ma_col,
-                    visible='legendonly',  # Default collapsed
-                    line=dict(color=color, width=1),
-                    opacity=0.8,
+                    visible=True if visible else 'legendonly',
+                    line=dict(color=color, width=1.5),
+                    opacity=0.9,
                     hovertemplate=f"{ma_col}: %{{y:,.2f}}<extra></extra>",
                 ),
                 row=1, col=1,
@@ -172,11 +171,11 @@ def render_price_chart(df: pd.DataFrame, ticker: str) -> None:
     if "Volume" in df.columns:
         if {"Open", "Close"}.issubset(df.columns):
             volume_colors = [
-                "rgba(38, 166, 154, 0.7)" if close_val >= open_val else "rgba(239, 83, 80, 0.7)"
+                "rgba(38, 166, 154, 0.6)" if close_val >= open_val else "rgba(239, 83, 80, 0.6)"
                 for open_val, close_val in zip(df["Open"], df["Close"])
             ]
         else:
-            volume_colors = "rgba(100, 150, 200, 0.6)"
+            volume_colors = "rgba(100, 150, 200, 0.5)"
 
         fig.add_trace(
             go.Bar(
@@ -203,37 +202,38 @@ def render_price_chart(df: pd.DataFrame, ticker: str) -> None:
 
     fig.update_layout(
         template="plotly_dark",
-        height=600,
+        height=650,
         showlegend=True,
         legend=dict(
-            orientation="v",
-            yanchor="top",
-            y=0.98,
+            orientation="h",
+            yanchor="bottom",
+            y=1.02,
             xanchor="left",
-            x=0.01,
-            bgcolor="rgba(0,0,0,0.5)",
-            bordercolor="rgba(255,255,255,0.2)",
+            x=0,
+            bgcolor="rgba(0,0,0,0.7)",
+            bordercolor="rgba(255,255,255,0.3)",
             borderwidth=1,
-            font=dict(size=10),
+            font=dict(size=11),
             itemclick="toggle",
             itemdoubleclick="toggleothers",
         ),
         xaxis_rangeslider_visible=False,
-        margin=dict(l=0, r=0, t=30, b=0),
+        margin=dict(l=10, r=10, t=50, b=10),
         hovermode="x unified",
         hoverlabel=dict(namelength=-1),
     )
     fig.update_xaxes(
         showgrid=True,
-        gridcolor="rgba(255,255,255,0.1)",
+        gridcolor="rgba(255,255,255,0.08)",
         showspikes=True,
         spikemode="across",
         spikesnap="cursor",
-        spikecolor="rgba(255,255,255,0.35)",
+        spikecolor="rgba(255,255,255,0.3)",
+        spikethickness=1,
     )
-    fig.update_yaxes(showgrid=True, gridcolor="rgba(255,255,255,0.1)")
+    fig.update_yaxes(showgrid=True, gridcolor="rgba(255,255,255,0.08)")
 
-    st.plotly_chart(fig, width='stretch')
+    st.plotly_chart(fig, use_container_width=True)
 
 
 def render_volume_chart(df: pd.DataFrame, ticker: str) -> None:
