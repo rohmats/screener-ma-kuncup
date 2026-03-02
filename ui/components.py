@@ -91,7 +91,7 @@ def render_results_table(df: pd.DataFrame, show_signals_only: bool = False) -> N
 
 
 def render_price_chart(df: pd.DataFrame, ticker: str) -> None:
-    """Render an interactive candlestick/line chart with MA overlay using Plotly."""
+    """Render TradingView-like chart: OHLC candlestick + MA overlays + Volume MA20."""
     if df.empty:
         st.warning(f"Tidak ada data untuk {ticker}.")
         return
@@ -104,15 +104,45 @@ def render_price_chart(df: pd.DataFrame, ticker: str) -> None:
         subplot_titles=(f"Harga & Moving Average — {ticker}", "Volume"),
     )
 
-    # Close price line
-    fig.add_trace(
-        go.Scatter(
-            x=df.index, y=df["Close"],
-            name="Close",
-            line=dict(color="#ffffff", width=1.5),
-        ),
-        row=1, col=1,
-    )
+    # Price as candlestick OHLC (fallback to Close line if OHLC is unavailable)
+    ohlc_cols = {"Open", "High", "Low", "Close"}
+    if ohlc_cols.issubset(df.columns):
+        fig.add_trace(
+            go.Candlestick(
+                x=df.index,
+                open=df["Open"],
+                high=df["High"],
+                low=df["Low"],
+                close=df["Close"],
+                name="OHLC",
+                increasing_line_color="#26a69a",
+                increasing_fillcolor="#26a69a",
+                decreasing_line_color="#ef5350",
+                decreasing_fillcolor="#ef5350",
+                hovertemplate=(
+                    "<b>%{x|%d-%m-%Y}</b><br>"
+                    "Open: %{open:,.2f}<br>"
+                    "High: %{high:,.2f}<br>"
+                    "Low: %{low:,.2f}<br>"
+                    "Close: %{close:,.2f}"
+                    "<extra></extra>"
+                ),
+            ),
+            row=1,
+            col=1,
+        )
+    elif "Close" in df.columns:
+        fig.add_trace(
+            go.Scatter(
+                x=df.index,
+                y=df["Close"],
+                name="Close",
+                line=dict(color="#ffffff", width=1.5),
+                hovertemplate="<b>%{x|%d-%m-%Y}</b><br>Close: %{y:,.2f}<extra></extra>",
+            ),
+            row=1,
+            col=1,
+        )
 
     # MA lines
     ma_colors = {
@@ -131,19 +161,42 @@ def render_price_chart(df: pd.DataFrame, ticker: str) -> None:
                     name=ma_col,
                     line=dict(color=color, width=1),
                     opacity=0.8,
+                    hovertemplate=f"{ma_col}: %{{y:,.2f}}<extra></extra>",
                 ),
                 row=1, col=1,
             )
 
-    # Volume bars
+    # Volume bars + MA20
     if "Volume" in df.columns:
+        if {"Open", "Close"}.issubset(df.columns):
+            volume_colors = [
+                "rgba(38, 166, 154, 0.7)" if close_val >= open_val else "rgba(239, 83, 80, 0.7)"
+                for open_val, close_val in zip(df["Open"], df["Close"])
+            ]
+        else:
+            volume_colors = "rgba(100, 150, 200, 0.6)"
+
         fig.add_trace(
             go.Bar(
                 x=df.index, y=df["Volume"],
                 name="Volume",
-                marker_color="rgba(100, 150, 200, 0.6)",
+                marker_color=volume_colors,
+                hovertemplate="Volume: %{y:,.0f}<extra></extra>",
             ),
             row=2, col=1,
+        )
+
+        volume_ma20 = df["Volume"].rolling(window=20, min_periods=1).mean()
+        fig.add_trace(
+            go.Scatter(
+                x=df.index,
+                y=volume_ma20,
+                name="Vol MA20",
+                line=dict(color="#ffd700", width=1.5),
+                hovertemplate="Vol MA20: %{y:,.0f}<extra></extra>",
+            ),
+            row=2,
+            col=1,
         )
 
     fig.update_layout(
@@ -153,8 +206,17 @@ def render_price_chart(df: pd.DataFrame, ticker: str) -> None:
         legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
         xaxis_rangeslider_visible=False,
         margin=dict(l=0, r=0, t=30, b=0),
+        hovermode="x unified",
+        hoverlabel=dict(namelength=-1),
     )
-    fig.update_xaxes(showgrid=True, gridcolor="rgba(255,255,255,0.1)")
+    fig.update_xaxes(
+        showgrid=True,
+        gridcolor="rgba(255,255,255,0.1)",
+        showspikes=True,
+        spikemode="across",
+        spikesnap="cursor",
+        spikecolor="rgba(255,255,255,0.35)",
+    )
     fig.update_yaxes(showgrid=True, gridcolor="rgba(255,255,255,0.1)")
 
     st.plotly_chart(fig, use_container_width=True)

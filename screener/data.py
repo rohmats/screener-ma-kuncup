@@ -16,7 +16,13 @@ def fetch_stock_data(ticker: str, period: str = config.DATA_PERIOD) -> pd.DataFr
     # Flatten MultiIndex columns if present (yfinance >= 0.2 may return them)
     if isinstance(df.columns, pd.MultiIndex):
         df.columns = df.columns.get_level_values(0)
-    df = df[["Close", "Volume"]].copy()
+
+    preferred_cols = ["Open", "High", "Low", "Close", "Volume"]
+    available_cols = [col for col in preferred_cols if col in df.columns]
+    if not available_cols:
+        return pd.DataFrame()
+
+    df = df[available_cols].copy()
     df.index = pd.to_datetime(df.index)
     return df
 
