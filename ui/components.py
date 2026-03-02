@@ -114,10 +114,16 @@ def render_price_chart(df: pd.DataFrame, ticker: str) -> None:
                 low=df["Low"],
                 close=df["Close"],
                 name="OHLC",
-                increasing_line_color="#26a69a",
-                increasing_fillcolor="#26a69a",
-                decreasing_line_color="#ef5350",
-                decreasing_fillcolor="#ef5350",
+                increasing=dict(
+                    line=dict(color="#089981", width=1.5),
+                    fillcolor="#089981"
+                ),
+                decreasing=dict(
+                    line=dict(color="#F23645", width=1.5),
+                    fillcolor="#F23645"
+                ),
+                whiskerwidth=0.8,
+                line=dict(width=1.2),
                 hovertemplate=(
                     "<b>%{x|%d-%m-%Y}</b><br>"
                     "Open: %{open:,.2f}<br>"
