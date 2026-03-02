@@ -101,7 +101,6 @@ def render_price_chart(df: pd.DataFrame, ticker: str) -> None:
         shared_xaxes=True,
         row_heights=[0.70, 0.30],
         vertical_spacing=0.03,
-        subplot_titles=(f"Harga & Moving Average — {ticker}", "Volume"),
     )
 
     # Price as candlestick OHLC (fallback to Close line if OHLC is unavailable)
@@ -205,20 +204,21 @@ def render_price_chart(df: pd.DataFrame, ticker: str) -> None:
         height=650,
         showlegend=True,
         legend=dict(
-            orientation="h",
-            yanchor="bottom",
-            y=1.02,
+            orientation="v",
+            yanchor="top",
+            y=0.99,
             xanchor="left",
-            x=0,
+            x=0.01,
             bgcolor="rgba(0,0,0,0.7)",
             bordercolor="rgba(255,255,255,0.3)",
             borderwidth=1,
-            font=dict(size=11),
+            font=dict(size=10),
             itemclick="toggle",
             itemdoubleclick="toggleothers",
+            itemsizing="constant",
         ),
         xaxis_rangeslider_visible=False,
-        margin=dict(l=10, r=10, t=50, b=10),
+        margin=dict(l=10, r=10, t=10, b=10),
         hovermode="x unified",
         hoverlabel=dict(namelength=-1),
     )
@@ -251,9 +251,8 @@ def render_volume_chart(df: pd.DataFrame, ticker: str) -> None:
     )
     fig.update_layout(
         template="plotly_dark",
-        title=f"Volume — {ticker}",
         height=200,
-        margin=dict(l=0, r=0, t=30, b=0),
+        margin=dict(l=0, r=0, t=10, b=0),
         showlegend=False,
     )
     st.plotly_chart(fig, width='stretch')
