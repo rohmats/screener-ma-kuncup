@@ -2,8 +2,10 @@ name: Daily MA Kuncup Screener
 
 on:
   schedule:
-    # 17:00 WIB = 10:00 UTC, Monday–Friday (market days only)
-    - cron: '0 10 * * 1-5'
+    # 7:30 WIB = 0:30 UTC, every day
+    - cron: '30 0 * * *'
+    # 17:00 WIB = 10:00 UTC, every day
+    - cron: '0 10 * * *'
   workflow_dispatch:  # Allow manual trigger from GitHub Actions UI
 
 jobs:
@@ -26,7 +28,10 @@ jobs:
         run: pip install -r requirements.txt
 
       - name: Run screener (all BEI stocks)
-        run: python main.py --all --save
+        run: python main.py --source bei --save
+
+      - name: Run screener (all Yahoo stocks)
+        run: python main.py --source yahoo --save
 
       - name: Commit and push results
         run: |
