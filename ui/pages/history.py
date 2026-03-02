@@ -205,12 +205,16 @@ def render_history() -> None:
         fig = go.Figure()
         for source in ["BEI", "Yahoo", "Unknown"]:
             if source in pivot_df.columns:
+                y_values = pivot_df[source]
                 fig.add_trace(
                     go.Bar(
                         x=pivot_df["Tanggal"],
-                        y=pivot_df[source],
+                        y=y_values,
                         name=source,
                         marker_color=source_colors.get(source, "#00bfff"),
+                        text=[str(int(v)) if float(v) > 0 else "" for v in y_values],
+                        textposition="outside",
+                        cliponaxis=False,
                     )
                 )
 
