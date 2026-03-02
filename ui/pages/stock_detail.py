@@ -78,6 +78,7 @@ def render_stock_detail() -> None:
             options=["MA Tight", "Tidak MA Tight"],
             default=["MA Tight", "Tidak MA Tight"],
             help="Filter berdasarkan kondisi MA Kuncup/MA Ketat",
+            key="stock_detail_filter_ma",
         )
     with col_f2:
         filter_signal = st.multiselect(
@@ -85,6 +86,7 @@ def render_stock_detail() -> None:
             options=["Sinyal Aktif", "Belum Sinyal"],
             default=["Sinyal Aktif", "Belum Sinyal"],
             help="Filter berdasarkan sinyal entry yang valid",
+            key="stock_detail_filter_signal",
         )
 
     st.divider()
@@ -110,11 +112,23 @@ def render_stock_detail() -> None:
             st.warning("Tidak ada saham yang sesuai dengan filter yang dipilih.")
             return
 
+        # Get previously selected ticker from session state, reset if not in filtered list
+        previously_selected = st.session_state.get("stock_detail_selected_ticker", None)
+        if previously_selected in ticker_list:
+            default_index = ticker_list.index(previously_selected)
+        else:
+            default_index = 0
+
         ticker = st.selectbox(
             "Pilih Ticker",
             options=ticker_list,
+            index=default_index,
             help=f"Daftar saham dari hasil screener/riwayat (tersaring: {len(ticker_list)} saham)",
+            key="stock_detail_ticker_select",
         )
+        
+        # Store selected ticker in session state
+        st.session_state["stock_detail_selected_ticker"] = ticker
 
         if session_results.empty and not history_results.empty:
             st.caption("ℹ️ Screener belum dijalankan pada sesi ini, daftar ticker diambil dari riwayat terbaru.")

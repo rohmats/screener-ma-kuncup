@@ -17,7 +17,7 @@ YAHOO_STOCKS_FILE = os.path.join(os.path.dirname(__file__), "..", "..", "data", 
 YAHOO_STOCKS_FILE = os.path.abspath(YAHOO_STOCKS_FILE)
 
 
-@st.cache_data(ttl=300)
+@st.cache_data(ttl=300, show_spinner=False)
 def cached_run_screener(
     symbols: tuple,
     range_ticks_threshold: float,
