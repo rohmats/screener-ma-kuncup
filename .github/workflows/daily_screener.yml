@@ -11,6 +11,7 @@ on:
 jobs:
   run-screener:
     runs-on: ubuntu-latest
+    timeout-minutes: 30
 
     permissions:
       contents: write  # Required to commit and push results back to the repo
@@ -23,20 +24,37 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
+          cache: 'pip'
 
       - name: Install dependencies
-        run: pip install -r requirements.txt
+        run: |
+          python -m pip install --upgrade pip setuptools wheel
+          pip install -r requirements.txt
+
+      - name: Clear Python cache
+        run: find . -type d -name __pycache__ -exec rm -rf {} + 2>/dev/null || true
 
       - name: Run screener (all BEI stocks)
         run: python main.py --source bei --save
+        timeout-minutes: 15
 
       - name: Run screener (all Yahoo stocks)
         run: python main.py --source yahoo --save
+        timeout-minutes: 15
+
+      - name: Check for results
+        run: ls -la data/results/ || echo "No results directory"
 
       - name: Commit and push results
+        if: success()
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add data/
-          git diff --staged --quiet || git commit -m "📊 Screener results $(date +%Y-%m-%d)"
-          git push
+          git add data/results/ data/bei_stocks.csv data/all_stocks.csv 2>/dev/null || true
+          git diff --staged --quiet || (git commit -m "📊 Screener results $(date +%Y-%m-%d)" && git push) || echo "No changes to commit"
+
+      - name: Workflow Failed Notification
+        if: failure()
+        run: |
+          echo "Screener workflow failed!"
+          echo "Check logs for details: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
