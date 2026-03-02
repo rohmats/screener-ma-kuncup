@@ -6,6 +6,7 @@ Fallback: local data/all_stocks.csv file
 """
 
 import os
+import re
 import time
 import requests
 import pandas as pd
@@ -131,6 +132,8 @@ def fetch_all_bei_tickers_from_yahoo(
         symbols.extend([q.get("symbol", "").strip().upper() for q in quotes if q.get("symbol")])
 
     symbols = [s for s in symbols if s]
+    symbols = [s.lstrip("$") for s in symbols]
+    symbols = [s for s in symbols if re.fullmatch(r"[A-Z0-9]+\.JK", s)]
     symbols = list(dict.fromkeys(symbols))
 
     if update_csv and symbols:

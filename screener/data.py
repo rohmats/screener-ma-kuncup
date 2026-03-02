@@ -1,5 +1,7 @@
 """Data fetching and loading utilities."""
 
+import re
+
 import pandas as pd
 import yfinance as yf
 
@@ -8,9 +10,18 @@ from screener import config
 
 def fetch_stock_data(ticker: str, period: str = config.DATA_PERIOD) -> pd.DataFrame:
     """Fetch OHLCV data from yfinance for a BEI stock (appends .JK suffix)."""
-    ticker = str(ticker).strip().upper()
+    ticker = str(ticker).strip().upper().lstrip("$")
+    ticker = re.sub(r"[^A-Z0-9\.]", "", ticker)
+    if not ticker:
+        return pd.DataFrame()
+
     symbol = ticker if ticker.endswith(".JK") else f"{ticker}.JK"
-    df = yf.download(symbol, period=period, auto_adjust=True, progress=False)
+
+    try:
+        df = yf.download(symbol, period=period, auto_adjust=True, progress=False)
+    except Exception:  # noqa: BLE001
+        return pd.DataFrame()
+
     if df.empty:
         return df
     # Flatten MultiIndex columns if present (yfinance >= 0.2 may return them)

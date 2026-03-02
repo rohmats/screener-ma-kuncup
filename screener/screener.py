@@ -86,13 +86,17 @@ def run_screener(
         return pd.DataFrame()
 
     def _worker(ticker: str) -> pd.Series | None:
-        return _screen_single_stock_with_params(
-            ticker=ticker,
-            range_ticks_threshold=range_ticks_threshold,
-            vol_pct_threshold=vol_pct_threshold,
-            min_volume=min_volume,
-            min_rows=min_rows,
-        )
+        try:
+            return _screen_single_stock_with_params(
+                ticker=ticker,
+                range_ticks_threshold=range_ticks_threshold,
+                vol_pct_threshold=vol_pct_threshold,
+                min_volume=min_volume,
+                min_rows=min_rows,
+            )
+        except Exception as exc:  # noqa: BLE001
+            print(f"[run_screener] Skip {ticker}: {exc}")
+            return None
 
     worker_count = max(1, min(int(max_workers), len(symbols)))
     if worker_count == 1:
