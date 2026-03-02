@@ -5,10 +5,10 @@ import re
 import pandas as pd
 import yfinance as yf
 
-from screener import config
+from screener.config import DATA_PERIOD
 
 
-def fetch_stock_data(ticker: str, period: str = config.DATA_PERIOD) -> pd.DataFrame:
+def fetch_stock_data(ticker: str, period: str = DATA_PERIOD) -> pd.DataFrame:
     """Fetch OHLCV data from yfinance for a BEI stock (appends .JK suffix)."""
     ticker = str(ticker).strip().upper().lstrip("$")
     ticker = re.sub(r"[^A-Z0-9\.]", "", ticker)

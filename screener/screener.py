@@ -4,7 +4,11 @@ from concurrent.futures import ThreadPoolExecutor
 
 import pandas as pd
 
-from screener import config
+from screener.config import (
+    RANGE_TICKS_THRESHOLD,
+    VOL_PCT_THRESHOLD,
+    MIN_VOLUME,
+)
 from screener.data import fetch_stock_data
 from screener.indicators import calculate_all_indicators
 
@@ -17,7 +21,7 @@ OUTPUT_COLS = [
 
 def is_ma_tight(range_ticks: float, vol_pct: float) -> bool:
     """Return True if the MA kuncup (tight) condition is satisfied."""
-    return range_ticks < config.RANGE_TICKS_THRESHOLD and vol_pct < config.VOL_PCT_THRESHOLD
+    return range_ticks < RANGE_TICKS_THRESHOLD and vol_pct < VOL_PCT_THRESHOLD
 
 
 def is_signal(row: pd.Series) -> bool:
@@ -26,7 +30,7 @@ def is_signal(row: pd.Series) -> bool:
         return False
     return (
         bool(row["MA_Tight"])
-        and row["Volume"] > config.MIN_VOLUME
+        and row["Volume"] > MIN_VOLUME
         and row["MA100"] <= row["Close"]
     )
 
@@ -66,18 +70,18 @@ def screen_single_stock(ticker: str) -> pd.Series | None:
     """Fetch and process a single stock with default config thresholds."""
     return _screen_single_stock_with_params(
         ticker=ticker,
-        range_ticks_threshold=config.RANGE_TICKS_THRESHOLD,
-        vol_pct_threshold=config.VOL_PCT_THRESHOLD,
-        min_volume=config.MIN_VOLUME,
+        range_ticks_threshold=RANGE_TICKS_THRESHOLD,
+        vol_pct_threshold=VOL_PCT_THRESHOLD,
+        min_volume=MIN_VOLUME,
         min_rows=100,
     )
 
 
 def run_screener(
     symbols: list,
-    range_ticks_threshold: float = config.RANGE_TICKS_THRESHOLD,
-    vol_pct_threshold: float = config.VOL_PCT_THRESHOLD,
-    min_volume: int = config.MIN_VOLUME,
+    range_ticks_threshold: float = RANGE_TICKS_THRESHOLD,
+    vol_pct_threshold: float = VOL_PCT_THRESHOLD,
+    min_volume: int = MIN_VOLUME,
     min_rows: int = 100,
     max_workers: int = 4,
 ) -> pd.DataFrame:

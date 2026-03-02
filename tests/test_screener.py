@@ -5,7 +5,7 @@ import pandas as pd
 import pytest
 
 from screener.screener import is_ma_tight, is_signal
-from screener import config
+from screener.config import RANGE_TICKS_THRESHOLD, VOL_PCT_THRESHOLD, MIN_VOLUME
 
 
 class TestIsMaTight:
@@ -13,18 +13,18 @@ class TestIsMaTight:
         assert is_ma_tight(range_ticks=3.0, vol_pct=2.0) is True
 
     def test_not_tight_when_range_too_high(self):
-        assert is_ma_tight(range_ticks=config.RANGE_TICKS_THRESHOLD, vol_pct=1.0) is False
+        assert is_ma_tight(range_ticks=RANGE_TICKS_THRESHOLD, vol_pct=1.0) is False
 
     def test_not_tight_when_vol_too_high(self):
-        assert is_ma_tight(range_ticks=2.0, vol_pct=config.VOL_PCT_THRESHOLD) is False
+        assert is_ma_tight(range_ticks=2.0, vol_pct=VOL_PCT_THRESHOLD) is False
 
     def test_not_tight_when_both_exceed_threshold(self):
         assert is_ma_tight(range_ticks=10.0, vol_pct=5.0) is False
 
     def test_tight_at_just_below_thresholds(self):
         assert is_ma_tight(
-            range_ticks=config.RANGE_TICKS_THRESHOLD - 0.001,
-            vol_pct=config.VOL_PCT_THRESHOLD - 0.001,
+            range_ticks=RANGE_TICKS_THRESHOLD - 0.001,
+            vol_pct=VOL_PCT_THRESHOLD - 0.001,
         ) is True
 
 
@@ -63,5 +63,5 @@ class TestIsSignal:
 
     def test_signal_false_when_volume_exactly_min(self):
         # Volume must be strictly greater than MIN_VOLUME
-        row = self._make_row(ma_tight=True, volume=config.MIN_VOLUME, ma100=900.0, close=1000.0)
+        row = self._make_row(ma_tight=True, volume=MIN_VOLUME, ma100=900.0, close=1000.0)
         assert is_signal(row) is False

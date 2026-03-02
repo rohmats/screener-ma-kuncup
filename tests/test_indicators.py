@@ -46,8 +46,8 @@ class TestCalculateRangeTicks:
         # All prices the same => all MAs equal => range is 0
         prices = [1000.0] * 60
         df = make_df(prices)
-        from screener import config
-        df = calculate_moving_averages(df, config.MA_PERIODS)
+        from screener.config import MA_PERIODS
+        df = calculate_moving_averages(df, MA_PERIODS)
         df = calculate_range_ticks(df)
         assert df["Range_Ticks"].iloc[-1] == pytest.approx(0.0)
 
@@ -55,8 +55,8 @@ class TestCalculateRangeTicks:
         # Increasing prices create spread between short and long MAs
         prices = list(range(100, 160))
         df = make_df(prices)
-        from screener import config
-        df = calculate_moving_averages(df, config.MA_PERIODS)
+        from screener.config import MA_PERIODS
+        df = calculate_moving_averages(df, MA_PERIODS)
         df = calculate_range_ticks(df)
         assert df["Range_Ticks"].iloc[-1] > 0
 
