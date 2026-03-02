@@ -2,9 +2,9 @@ name: Daily MA Kuncup Screener
 
 on:
   schedule:
-    # 7:30 WIB = 0:30 UTC, every day
+    # GitHub schedule uses UTC. This is 07:30 WIB (GMT+7) daily.
     - cron: '30 0 * * *'
-    # 17:00 WIB = 10:00 UTC, every day
+    # GitHub schedule uses UTC. This is 17:00 WIB (GMT+7) daily.
     - cron: '0 10 * * *'
   workflow_dispatch:  # Allow manual trigger from GitHub Actions UI
 
@@ -12,6 +12,8 @@ jobs:
   run-screener:
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    env:
+      TZ: Asia/Jakarta
 
     permissions:
       contents: write  # Required to commit and push results back to the repo

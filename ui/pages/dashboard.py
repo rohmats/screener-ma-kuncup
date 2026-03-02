@@ -1,7 +1,6 @@
 """Dashboard utama Screener MA Kuncup."""
 
 import os
-from datetime import datetime
 
 import pandas as pd
 import streamlit as st
@@ -9,6 +8,7 @@ import streamlit as st
 from screener.data import load_stock_list
 from screener.fetch_bei_stocks import fetch_all_bei_tickers_from_yahoo
 from screener.screener import run_screener
+from screener.time_utils import now_jakarta
 from ui.components import render_metric_cards, render_results_table
 
 BEI_STOCKS_FILE = os.path.join(os.path.dirname(__file__), "..", "..", "data", "bei_stocks.csv")
@@ -168,7 +168,7 @@ def render_dashboard() -> None:
                 tuple(symbols), range_ticks, vol_pct, min_volume
             )
         st.session_state["results"] = results
-        st.session_state["scan_time"] = datetime.now().strftime("%H:%M:%S")
+        st.session_state["scan_time"] = now_jakarta().strftime("%H:%M:%S")
         st.session_state["symbols_scanned"] = len(symbols)
         # Store parameters in session state for detail page to use
         st.session_state["range_ticks_threshold"] = range_ticks
@@ -201,10 +201,12 @@ def render_dashboard() -> None:
 
         # Download CSV button
         csv_data = results.to_csv(index=False).encode("utf-8")
+        source_suffix = "bei" if data_source == "Saham BEI (±500, cache IDX)" else "yahoo"
+        datetime_prefix = now_jakarta().strftime("%Y-%m-%d_%H%M%S")
         st.download_button(
             label="⬇️ Download CSV",
             data=csv_data,
-            file_name=f"screener_ma_kuncup_{datetime.now().strftime('%d-%m-%Y_%H%M%S')}.csv",
+            file_name=f"{datetime_prefix}_screener_{source_suffix}.csv",
             mime="text/csv",
         )
 

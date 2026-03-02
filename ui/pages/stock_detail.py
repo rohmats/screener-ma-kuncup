@@ -1,6 +1,8 @@
 """Halaman detail saham — chart harga, MA, volume, dan indikator."""
 
+from datetime import datetime
 from pathlib import Path
+import re
 
 import pandas as pd
 import streamlit as st
@@ -44,9 +46,32 @@ def _load_latest_history_results() -> pd.DataFrame:
     if not RESULTS_DIR.exists():
         return pd.DataFrame()
 
-    result_files = sorted(RESULTS_DIR.glob("*.csv"), reverse=True)
+    result_files = list(RESULTS_DIR.glob("*.csv"))
     if not result_files:
         return pd.DataFrame()
+
+    def _extract_timestamp(filepath: Path) -> datetime:
+        stem = filepath.stem
+        match_legacy = re.search(r"(\d{8})_(\d{6})$", stem)
+        match_new = re.search(r"(\d{2}-\d{2}-\d{4})_(\d{6})", stem)
+
+        try:
+            if match_legacy:
+                return datetime.strptime(
+                    f"{match_legacy.group(1)}_{match_legacy.group(2)}",
+                    "%Y%m%d_%H%M%S",
+                )
+            if match_new:
+                return datetime.strptime(
+                    f"{match_new.group(1)}_{match_new.group(2)}",
+                    "%d-%m-%Y_%H%M%S",
+                )
+        except ValueError:
+            pass
+
+        return datetime.fromtimestamp(filepath.stat().st_mtime)
+
+    result_files = sorted(result_files, key=_extract_timestamp, reverse=True)
 
     try:
         return pd.read_csv(result_files[0])

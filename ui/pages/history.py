@@ -15,8 +15,17 @@ def _list_result_files() -> list:
     """Scan data/results/ for CSV files and return sorted list of paths."""
     if not RESULTS_DIR.exists():
         return []
-    files = sorted(RESULTS_DIR.glob("*.csv"), reverse=True)
-    return list(files)
+
+    files = list(RESULTS_DIR.glob("*.csv"))
+
+    def _sort_key(path: Path):
+        metadata = _extract_result_metadata(path)
+        timestamp = metadata["timestamp"]
+        if timestamp is None:
+            timestamp = datetime.fromtimestamp(path.stat().st_mtime)
+        return timestamp
+
+    return sorted(files, key=_sort_key, reverse=True)
 
 
 def _extract_result_metadata(filepath: Path) -> dict:

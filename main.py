@@ -4,10 +4,10 @@ import os
 import sys
 import argparse
 import pandas as pd
-from datetime import datetime
 
 from screener.data import load_stock_list
 from screener.screener import run_screener
+from screener.time_utils import now_jakarta
 
 STOCKS_FILE = os.path.join(os.path.dirname(__file__), "stocks.csv")
 BEI_STOCKS_FILE = os.path.join(os.path.dirname(__file__), "data", "bei_stocks.csv")
@@ -70,7 +70,7 @@ def main():
 
     # Save results if requested
     if args.save:
-        timestamp = datetime.now().strftime("%d-%m-%Y_%H%M%S")
+        timestamp = now_jakarta().strftime("%d-%m-%Y_%H%M%S")
         output_file = os.path.join(
             os.path.dirname(__file__),
             "data",
