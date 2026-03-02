@@ -1,7 +1,8 @@
 """Halaman riwayat hasil screener dari folder data/results/."""
 
-import os
+from datetime import datetime
 from pathlib import Path
+import re
 
 import pandas as pd
 import plotly.graph_objects as go
@@ -18,13 +19,38 @@ def _list_result_files() -> list:
     return list(files)
 
 
-def _extract_date_from_filename(filepath: Path) -> str:
-    """Extract a human-readable date label from filename (e.g. results_2024-01-15.csv)."""
+def _extract_result_metadata(filepath: Path) -> dict:
+    """Extract source, timestamp, and display label from result filename."""
     stem = filepath.stem
-    # Remove common prefixes
-    for prefix in ("results_", "screener_", "scan_"):
-        stem = stem.replace(prefix, "")
-    return stem
+    stem_lower = stem.lower()
+
+    source = "Unknown"
+    if "_bei_" in stem_lower:
+        source = "BEI"
+    elif "_yahoo_" in stem_lower:
+        source = "Yahoo"
+
+    timestamp = None
+    match = re.search(r"(\d{8})_(\d{6})$", stem)
+    if match:
+        try:
+            timestamp = datetime.strptime(f"{match.group(1)}_{match.group(2)}", "%Y%m%d_%H%M%S")
+        except ValueError:
+            timestamp = None
+
+    if timestamp is not None:
+        label = f"{timestamp.strftime('%Y-%m-%d %H:%M:%S')} ({source})"
+    else:
+        clean_stem = stem
+        for prefix in ("results_", "screener_", "scan_"):
+            clean_stem = clean_stem.replace(prefix, "")
+        label = clean_stem
+
+    return {
+        "source": source,
+        "timestamp": timestamp,
+        "label": label,
+    }
 
 
 def render_history() -> None:
@@ -47,7 +73,7 @@ def render_history() -> None:
         return
 
     # Date selector
-    file_labels = [_extract_date_from_filename(f) for f in result_files]
+    file_labels = [_extract_result_metadata(f)["label"] for f in result_files]
     selected_label = st.selectbox(
         "Pilih Tanggal",
         options=file_labels,
@@ -77,58 +103,127 @@ def render_history() -> None:
 
     st.divider()
 
+    # Filters for selected date result
+    st.subheader("🔍 Filter Hasil")
+    col_f1, col_f2 = st.columns(2)
+    with col_f1:
+        filter_ma = st.multiselect(
+            "Filter Status MA",
+            options=["MA Tight", "Tidak MA Tight"],
+            default=["MA Tight", "Tidak MA Tight"],
+            help="Filter berdasarkan kondisi MA Kuncup/MA Ketat",
+        )
+    with col_f2:
+        filter_signal = st.multiselect(
+            "Filter Status Sinyal",
+            options=["Sinyal Aktif", "Belum Sinyal"],
+            default=["Sinyal Aktif", "Belum Sinyal"],
+            help="Filter berdasarkan status sinyal entry",
+        )
+
+    filtered_df = df.copy()
+
+    if "MA_Tight" in filtered_df.columns and filter_ma:
+        if "MA Tight" in filter_ma and "Tidak MA Tight" not in filter_ma:
+            filtered_df = filtered_df[filtered_df["MA_Tight"].eq(True)]
+        elif "Tidak MA Tight" in filter_ma and "MA Tight" not in filter_ma:
+            filtered_df = filtered_df[filtered_df["MA_Tight"].eq(False)]
+
+    if "Signal" in filtered_df.columns and filter_signal:
+        if "Sinyal Aktif" in filter_signal and "Belum Sinyal" not in filter_signal:
+            filtered_df = filtered_df[filtered_df["Signal"].eq(True)]
+        elif "Belum Sinyal" in filter_signal and "Sinyal Aktif" not in filter_signal:
+            filtered_df = filtered_df[filtered_df["Signal"].eq(False)]
+
+    st.caption(f"Menampilkan {len(filtered_df)} dari {len(df)} saham pada file terpilih.")
+
+    st.divider()
+
     # Table for selected date
     st.subheader(f"📋 Hasil Scan: {selected_label}")
-    if not df.empty:
-        csv_data = df.to_csv(index=False).encode("utf-8")
+    if not filtered_df.empty:
+        csv_data = filtered_df.to_csv(index=False).encode("utf-8")
         st.download_button(
             label="⬇️ Download CSV",
             data=csv_data,
             file_name=selected_file.name,
             mime="text/csv",
         )
-        st.dataframe(df, use_container_width=True, hide_index=True)
+        st.dataframe(filtered_df, use_container_width=True, hide_index=True)
     else:
-        st.info("File kosong.")
+        st.info("Tidak ada data yang sesuai dengan filter.")
 
     st.divider()
 
     # Signal trend chart across all dates
-    st.subheader("📈 Tren Jumlah Sinyal per Hari")
+    st.subheader("📈 Tren Jumlah Sinyal per Scan")
 
     trend_data = []
     for filepath in result_files:
         try:
             temp_df = pd.read_csv(filepath)
             signals = int(temp_df["Signal"].sum()) if "Signal" in temp_df.columns else 0
+            metadata = _extract_result_metadata(filepath)
             trend_data.append({
-                "Tanggal": _extract_date_from_filename(filepath),
+                "Label": metadata["label"],
+                "Waktu": metadata["timestamp"],
+                "Sumber": metadata["source"],
                 "Sinyal": signals,
             })
         except Exception:
             continue
 
     if trend_data:
-        trend_df = pd.DataFrame(trend_data).sort_values("Tanggal")
-        fig = go.Figure()
-        fig.add_trace(
-            go.Scatter(
-                x=trend_df["Tanggal"],
-                y=trend_df["Sinyal"],
-                mode="lines+markers",
-                name="Jumlah Sinyal",
-                line=dict(color="#00bfff", width=2),
-                marker=dict(size=6),
+        trend_df = pd.DataFrame(trend_data)
+        trend_df["Waktu"] = pd.to_datetime(trend_df["Waktu"], errors="coerce")
+
+        if trend_df["Waktu"].notna().any():
+            trend_df = trend_df.sort_values(["Waktu", "Label"])
+            trend_df["Sumbu_X"] = trend_df["Waktu"].dt.strftime("%Y-%m-%d %H:%M:%S")
+        else:
+            trend_df = trend_df.sort_values("Label")
+            trend_df["Sumbu_X"] = trend_df["Label"]
+
+        pivot_df = (
+            trend_df.pivot_table(
+                index="Sumbu_X",
+                columns="Sumber",
+                values="Sinyal",
+                aggfunc="sum",
+                fill_value=0,
             )
+            .reset_index()
         )
+
+        source_colors = {
+            "BEI": "#00bfff",
+            "Yahoo": "#00c864",
+            "Unknown": "#a0a0a0",
+        }
+
+        fig = go.Figure()
+        for source in ["BEI", "Yahoo", "Unknown"]:
+            if source in pivot_df.columns:
+                fig.add_trace(
+                    go.Bar(
+                        x=pivot_df["Sumbu_X"],
+                        y=pivot_df[source],
+                        name=source,
+                        marker_color=source_colors.get(source, "#00bfff"),
+                    )
+                )
+
         fig.update_layout(
             template="plotly_dark",
             height=300,
-            xaxis_title="Tanggal",
+            xaxis_title="Waktu Scan",
             yaxis_title="Jumlah Sinyal",
             margin=dict(l=0, r=0, t=10, b=0),
-            showlegend=False,
+            barmode="group",
+            showlegend=True,
+            legend_title_text="Sumber",
         )
+        fig.update_xaxes(type="category", tickangle=-30)
         st.plotly_chart(fig, use_container_width=True)
     else:
         st.info("Tidak cukup data untuk menampilkan tren.")

@@ -1,5 +1,7 @@
 """Halaman detail saham — chart harga, MA, volume, dan indikator."""
 
+from pathlib import Path
+
 import pandas as pd
 import streamlit as st
 
@@ -7,6 +9,9 @@ from screener.data import fetch_stock_data
 from screener.indicators import calculate_all_indicators
 from screener.screener import is_ma_tight, is_signal
 from ui.components import render_price_chart
+
+
+RESULTS_DIR = Path(__file__).parent.parent.parent / "data" / "results"
 
 
 @st.cache_data(ttl=300)
@@ -24,14 +29,32 @@ def _fetch_and_compute(ticker: str) -> pd.DataFrame:
     return df
 
 
+@st.cache_data(ttl=120)
+def _load_latest_history_results() -> pd.DataFrame:
+    """Load latest historical screener result file from data/results/ as fallback source."""
+    if not RESULTS_DIR.exists():
+        return pd.DataFrame()
+
+    result_files = sorted(RESULTS_DIR.glob("*.csv"), reverse=True)
+    if not result_files:
+        return pd.DataFrame()
+
+    try:
+        return pd.read_csv(result_files[0])
+    except Exception:
+        return pd.DataFrame()
+
+
 def render_stock_detail() -> None:
     """Render the stock detail page."""
     st.title("📈 Detail Saham")
     st.markdown("Tampilkan chart harga, Moving Average, dan indikator untuk saham pilihan.")
     st.divider()
 
-    # Ticker input
-    results = st.session_state.get("results", pd.DataFrame())
+    # Ticker source: prefer current session results; fallback to latest history file.
+    session_results = st.session_state.get("results", pd.DataFrame())
+    history_results = _load_latest_history_results() if session_results.empty else pd.DataFrame()
+    results = session_results if not session_results.empty else history_results
     
     # Status filters - always available
     st.subheader("🔍 Filter Status")
@@ -77,8 +100,11 @@ def render_stock_detail() -> None:
         ticker = st.selectbox(
             "Pilih Ticker",
             options=ticker_list,
-            help=f"Daftar saham dari hasil scan terakhir (tersaring: {len(ticker_list)} saham)",
+            help=f"Daftar saham dari hasil screener/riwayat (tersaring: {len(ticker_list)} saham)",
         )
+
+        if session_results.empty and not history_results.empty:
+            st.caption("ℹ️ Screener belum dijalankan pada sesi ini, daftar ticker diambil dari riwayat terbaru.")
     else:
         ticker = st.text_input(
             "Masukkan Ticker Saham (contoh: BBCA)",
