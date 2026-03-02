@@ -143,22 +143,21 @@ def render_price_chart(df: pd.DataFrame, ticker: str) -> None:
             col=1,
         )
 
-    # MA lines - only show MA5, MA20, MA50 by default
+    # MA lines - all visible by default
     ma_colors = {
-        "MA3": ("#ff6b6b", False),
-        "MA5": ("#ffa500", True),
-        "MA10": ("#ffd700", False),
-        "MA20": ("#7fff00", True),
-        "MA50": ("#00bfff", True),
-        "MA100": ("#da70d6", False),
+        "MA3": "#ff6b6b",
+        "MA5": "#ffa500",
+        "MA10": "#ffd700",
+        "MA20": "#7fff00",
+        "MA50": "#00bfff",
+        "MA100": "#da70d6",
     }
-    for ma_col, (color, visible) in ma_colors.items():
+    for ma_col, color in ma_colors.items():
         if ma_col in df.columns:
             fig.add_trace(
                 go.Scatter(
                     x=df.index, y=df[ma_col],
                     name=ma_col,
-                    visible=True if visible else 'legendonly',
                     line=dict(color=color, width=1.5),
                     opacity=0.9,
                     hovertemplate=f"{ma_col}: %{{y:,.2f}}<extra></extra>",
