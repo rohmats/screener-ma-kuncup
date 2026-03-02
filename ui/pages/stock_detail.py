@@ -129,7 +129,7 @@ def render_stock_detail() -> None:
         filter_signal = st.multiselect(
             "🚀 Filter Status Entry",
             options=["Sinyal Aktif", "Belum Sinyal"],
-            default=["Sinyal Aktif", "Belum Sinyal"],
+            default=["Sinyal Aktif"],
             help="Filter berdasarkan sinyal entry yang valid",
             key="stock_detail_filter_signal",
         )

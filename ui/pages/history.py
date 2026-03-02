@@ -168,7 +168,7 @@ def render_history() -> None:
         filter_signal = st.multiselect(
             "Filter Status Sinyal",
             options=["Sinyal Aktif", "Belum Sinyal"],
-            default=["Sinyal Aktif", "Belum Sinyal"],
+            default=["Sinyal Aktif"],
             help="Filter berdasarkan status sinyal entry",
         )
 
