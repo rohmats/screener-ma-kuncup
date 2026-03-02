@@ -6,43 +6,15 @@ from datetime import datetime
 import pandas as pd
 import streamlit as st
 
-from screener.data import fetch_stock_data, load_stock_list
+from screener.data import load_stock_list
 from screener.fetch_bei_stocks import fetch_all_bei_tickers_from_yahoo
-from screener.indicators import calculate_all_indicators
+from screener.screener import run_screener
 from ui.components import render_metric_cards, render_results_table
 
 BEI_STOCKS_FILE = os.path.join(os.path.dirname(__file__), "..", "..", "data", "bei_stocks.csv")
 BEI_STOCKS_FILE = os.path.abspath(BEI_STOCKS_FILE)
 YAHOO_STOCKS_FILE = os.path.join(os.path.dirname(__file__), "..", "..", "data", "all_stocks.csv")
 YAHOO_STOCKS_FILE = os.path.abspath(YAHOO_STOCKS_FILE)
-
-
-def _screen_with_params(
-    ticker: str,
-    range_ticks_threshold: float,
-    vol_pct_threshold: float,
-    min_volume: int,
-) -> "pd.Series | None":
-    """Screen a single stock using caller-supplied thresholds (no global mutation)."""
-    df = fetch_stock_data(ticker)
-    if df is None or df.empty or len(df) < 100:
-        return None
-    df = calculate_all_indicators(df)
-    df["MA_Tight"] = (
-        (df["Range_Ticks"] < range_ticks_threshold)
-        & (df["Vol_Pct"] < vol_pct_threshold)
-    )
-    latest = df.iloc[-1].copy()
-    latest["Signal"] = bool(
-        pd.notna(latest.get("MA_Tight"))
-        and pd.notna(latest.get("Volume"))
-        and pd.notna(latest.get("MA100"))
-        and bool(latest["MA_Tight"])
-        and latest["Volume"] > min_volume
-        and latest["MA100"] <= latest["Close"]
-    )
-    latest["Ticker"] = ticker
-    return latest
 
 
 @st.cache_data(ttl=300)
@@ -53,22 +25,12 @@ def cached_run_screener(
     min_volume: int,
 ) -> pd.DataFrame:
     """Run screener with custom thresholds, cached for 5 minutes."""
-    records = []
-    for ticker in symbols:
-        result = _screen_with_params(ticker, range_ticks_threshold, vol_pct_threshold, min_volume)
-        if result is not None:
-            records.append(result)
-
-    if not records:
-        return pd.DataFrame()
-
-    output_cols = [
-        "Ticker", "Close", "MA3", "MA5", "MA10", "MA20", "MA50", "MA100",
-        "Range_Ticks", "Vol_Pct", "Volume", "MA_Tight", "Signal",
-    ]
-    df_out = pd.DataFrame(records)
-    df_out = df_out[[c for c in output_cols if c in df_out.columns]].reset_index(drop=True)
-    return df_out
+    return run_screener(
+        symbols=list(symbols),
+        range_ticks_threshold=range_ticks_threshold,
+        vol_pct_threshold=vol_pct_threshold,
+        min_volume=min_volume,
+    )
 
 
 def _get_bei_symbols() -> list:
@@ -239,7 +201,7 @@ def render_dashboard() -> None:
         st.download_button(
             label="⬇️ Download CSV",
             data=csv_data,
-            file_name=f"screener_ma_kuncup_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv",
+            file_name=f"screener_ma_kuncup_{datetime.now().strftime('%d-%m-%Y_%H%M%S')}.csv",
             mime="text/csv",
         )
 

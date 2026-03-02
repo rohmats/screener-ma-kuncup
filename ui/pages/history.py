@@ -31,15 +31,28 @@ def _extract_result_metadata(filepath: Path) -> dict:
         source = "Yahoo"
 
     timestamp = None
-    match = re.search(r"(\d{8})_(\d{6})$", stem)
-    if match:
+    match_legacy = re.search(r"(\d{8})_(\d{6})$", stem)
+    match_new = re.search(r"(\d{2}-\d{2}-\d{4})_(\d{6})$", stem)
+
+    if match_legacy:
         try:
-            timestamp = datetime.strptime(f"{match.group(1)}_{match.group(2)}", "%Y%m%d_%H%M%S")
+            timestamp = datetime.strptime(
+                f"{match_legacy.group(1)}_{match_legacy.group(2)}",
+                "%Y%m%d_%H%M%S",
+            )
+        except ValueError:
+            timestamp = None
+    elif match_new:
+        try:
+            timestamp = datetime.strptime(
+                f"{match_new.group(1)}_{match_new.group(2)}",
+                "%d-%m-%Y_%H%M%S",
+            )
         except ValueError:
             timestamp = None
 
     if timestamp is not None:
-        label = f"{timestamp.strftime('%Y-%m-%d %H:%M:%S')} ({source})"
+        label = f"{timestamp.strftime('%d-%m-%Y %H:%M:%S')} ({source})"
     else:
         clean_stem = stem
         for prefix in ("results_", "screener_", "scan_"):
@@ -51,6 +64,12 @@ def _extract_result_metadata(filepath: Path) -> dict:
         "timestamp": timestamp,
         "label": label,
     }
+
+
+@st.cache_data(ttl=120)
+def _read_result_csv(filepath: str) -> pd.DataFrame:
+    """Read one historical result file with short-lived cache."""
+    return pd.read_csv(filepath)
 
 
 def render_history() -> None:
@@ -86,7 +105,7 @@ def render_history() -> None:
 
     # Load selected file
     try:
-        df = pd.read_csv(selected_file)
+        df = _read_result_csv(str(selected_file))
     except Exception as e:
         st.error(f"Gagal membaca file: {e}")
         return
@@ -161,7 +180,7 @@ def render_history() -> None:
     trend_data = []
     for filepath in result_files:
         try:
-            temp_df = pd.read_csv(filepath)
+            temp_df = _read_result_csv(str(filepath))
             signals = int(temp_df["Signal"].sum()) if "Signal" in temp_df.columns else 0
             metadata = _extract_result_metadata(filepath)
             trend_data.append({
@@ -178,21 +197,23 @@ def render_history() -> None:
         trend_df["Waktu"] = pd.to_datetime(trend_df["Waktu"], errors="coerce")
 
         if trend_df["Waktu"].notna().any():
-            trend_df["Tanggal"] = trend_df["Waktu"].dt.strftime("%Y-%m-%d")
+            trend_df["Tanggal"] = trend_df["Waktu"].dt.strftime("%d-%m-%Y")
+            trend_df["Tanggal_Sort"] = trend_df["Waktu"].dt.strftime("%Y-%m-%d")
             trend_df = trend_df.sort_values(["Waktu", "Label"])
         else:
             trend_df = trend_df.sort_values("Label")
             trend_df["Tanggal"] = trend_df["Label"].astype(str).str[:10]
+            trend_df["Tanggal_Sort"] = trend_df["Tanggal"]
 
         pivot_df = (
             trend_df.pivot_table(
-                index="Tanggal",
+                index=["Tanggal_Sort", "Tanggal"],
                 columns="Sumber",
                 values="Sinyal",
                 aggfunc="sum",
                 fill_value=0,
             )
-            .sort_index()
+            .sort_index(level=0)
             .reset_index()
         )
 
@@ -228,7 +249,7 @@ def render_history() -> None:
             showlegend=True,
             legend_title_text="Sumber",
         )
-        fig.update_xaxes(type="category", tickangle=-30)
+        fig.update_xaxes(type="category", tickangle=0)
         st.plotly_chart(fig, use_container_width=True)
     else:
         st.info("Tidak cukup data untuk menampilkan tren.")

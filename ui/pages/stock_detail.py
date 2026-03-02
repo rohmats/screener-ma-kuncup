@@ -7,7 +7,7 @@ import streamlit as st
 
 from screener.data import fetch_stock_data
 from screener.indicators import calculate_all_indicators
-from screener.screener import is_ma_tight, is_signal
+from screener.screener import is_signal
 from ui.components import render_price_chart
 
 
@@ -81,15 +81,15 @@ def render_stock_detail() -> None:
         filtered_results = results.copy()
         if filter_ma:
             if "MA Tight" in filter_ma and "Tidak MA Tight" not in filter_ma:
-                filtered_results = filtered_results[filtered_results["MA_Tight"] == True]
+                filtered_results = filtered_results[filtered_results["MA_Tight"].eq(True)]
             elif "Tidak MA Tight" in filter_ma and "MA Tight" not in filter_ma:
-                filtered_results = filtered_results[filtered_results["MA_Tight"] == False]
+                filtered_results = filtered_results[filtered_results["MA_Tight"].eq(False)]
 
         if filter_signal:
             if "Sinyal Aktif" in filter_signal and "Belum Sinyal" not in filter_signal:
-                filtered_results = filtered_results[filtered_results["Signal"] == True]
+                filtered_results = filtered_results[filtered_results["Signal"].eq(True)]
             elif "Belum Sinyal" in filter_signal and "Sinyal Aktif" not in filter_signal:
-                filtered_results = filtered_results[filtered_results["Signal"] == False]
+                filtered_results = filtered_results[filtered_results["Signal"].eq(False)]
 
         ticker_list = sorted(filtered_results["Ticker"].dropna().unique().tolist())
         
@@ -160,7 +160,7 @@ def render_stock_detail() -> None:
     ]
     available_cols = [c for c in indicator_cols if c in df.columns]
     recent_df = df[available_cols].tail(20).copy()
-    recent_df.index = recent_df.index.strftime("%Y-%m-%d")
+    recent_df.index = recent_df.index.strftime("%d-%m-%Y")
 
     # Format boolean columns
     if "MA_Tight" in recent_df.columns:

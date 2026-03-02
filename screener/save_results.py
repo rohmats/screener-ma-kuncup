@@ -12,11 +12,11 @@ def save_screener_results(df: pd.DataFrame, output_dir: str = "data/results") ->
     """Save screener results to CSV files with a date-based filename.
 
     Two files are written:
-    - ``{output_dir}/YYYY-MM-DD_screener.csv`` — all processed tickers.
-    - ``{output_dir}/YYYY-MM-DD_signals.csv``  — only tickers where Signal is True.
+    - ``{output_dir}/DD-MM-YYYY_screener.csv`` — all processed tickers.
+    - ``{output_dir}/DD-MM-YYYY_signals.csv``  — only tickers where Signal is True.
     """
     os.makedirs(output_dir, exist_ok=True)
-    today = datetime.now().strftime("%Y-%m-%d")
+    today = datetime.now().strftime("%d-%m-%Y")
 
     screener_path = os.path.join(output_dir, f"{today}_screener.csv")
     df.to_csv(screener_path, index=False)
