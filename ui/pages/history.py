@@ -51,28 +51,31 @@ def _extract_result_metadata(filepath: Path) -> dict:
     stem = filepath.stem
     stem_lower = stem.lower()
 
+    # Detect source from filename pattern: YYYYMMDD_HHMMSS_source[_signals]
     source = "Unknown"
-    if "_bei_" in stem_lower:
+    if "_bei" in stem_lower:
         source = "BEI"
-    elif "_yahoo_" in stem_lower:
+    elif "_yahoo" in stem_lower:
         source = "Yahoo"
 
     timestamp = None
-    match_legacy = re.search(r"(\d{8})_(\d{6})$", stem)
-    match_new = re.search(r"(\d{2}-\d{2}-\d{4})_(\d{6})$", stem)
+    # Match YYYYMMDD_HHMMSS at the start of filename
+    match_new = re.match(r"^(\d{8})_(\d{6})", stem)
+    # Legacy format: DD-MM-YYYY_HHMMSS
+    match_legacy = re.search(r"(\d{2}-\d{2}-\d{4})_(\d{6})", stem)
 
-    if match_legacy:
+    if match_new:
         try:
             timestamp = datetime.strptime(
-                f"{match_legacy.group(1)}_{match_legacy.group(2)}",
+                f"{match_new.group(1)}_{match_new.group(2)}",
                 "%Y%m%d_%H%M%S",
             )
         except ValueError:
             timestamp = None
-    elif match_new:
+    elif match_legacy:
         try:
             timestamp = datetime.strptime(
-                f"{match_new.group(1)}_{match_new.group(2)}",
+                f"{match_legacy.group(1)}_{match_legacy.group(2)}",
                 "%d-%m-%Y_%H%M%S",
             )
         except ValueError:

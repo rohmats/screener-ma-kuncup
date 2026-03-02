@@ -202,11 +202,11 @@ def render_dashboard() -> None:
         # Download CSV button
         csv_data = results.to_csv(index=False).encode("utf-8")
         source_suffix = "bei" if data_source == "Saham BEI (±500, cache IDX)" else "yahoo"
-        datetime_prefix = now_jakarta().strftime("%Y-%m-%d_%H%M%S")
+        datetime_prefix = now_jakarta().strftime("%Y%m%d_%H%M%S")
         st.download_button(
             label="⬇️ Download CSV",
             data=csv_data,
-            file_name=f"{datetime_prefix}_screener_{source_suffix}.csv",
+            file_name=f"{datetime_prefix}_{source_suffix}.csv",
             mime="text/csv",
         )
 

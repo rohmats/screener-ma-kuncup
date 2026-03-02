@@ -70,16 +70,10 @@ def main():
 
     # Save results if requested
     if args.save:
-        timestamp = now_jakarta().strftime("%Y%m%d_%H%M%S")
-        output_file = os.path.join(
-            os.path.dirname(__file__),
-            "data",
-            "results",
-            f"screener_{args.source}_{timestamp}.csv"
-        )
-        os.makedirs(os.path.dirname(output_file), exist_ok=True)
-        results.to_csv(output_file, index=False)
-        print(f"\nResults saved to: {output_file}")
+        from screener.save_results import save_screener_results
+        output_dir = os.path.join(os.path.dirname(__file__), "data", "results")
+        save_screener_results(results, output_dir=output_dir, source=args.source)
+        print(f"\nResults saved to {output_dir}/ with source: {args.source}")
 
 
 if __name__ == "__main__":

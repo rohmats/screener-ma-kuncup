@@ -70,18 +70,20 @@ def _load_latest_history_results() -> pd.DataFrame:
 
     def _extract_timestamp(filepath: Path) -> datetime:
         stem = filepath.stem
-        match_legacy = re.search(r"(\d{8})_(\d{6})$", stem)
-        match_new = re.search(r"(\d{2}-\d{2}-\d{4})_(\d{6})", stem)
+        # Match YYYYMMDD_HHMMSS at the start
+        match_new = re.match(r"^(\d{8})_(\d{6})", stem)
+        # Legacy format: DD-MM-YYYY_HHMMSS
+        match_legacy = re.search(r"(\d{2}-\d{2}-\d{4})_(\d{6})", stem)
 
         try:
-            if match_legacy:
-                return datetime.strptime(
-                    f"{match_legacy.group(1)}_{match_legacy.group(2)}",
-                    "%Y%m%d_%H%M%S",
-                )
             if match_new:
                 return datetime.strptime(
                     f"{match_new.group(1)}_{match_new.group(2)}",
+                    "%Y%m%d_%H%M%S",
+                )
+            if match_legacy:
+                return datetime.strptime(
+                    f"{match_legacy.group(1)}_{match_legacy.group(2)}",
                     "%d-%m-%Y_%H%M%S",
                 )
         except ValueError:
