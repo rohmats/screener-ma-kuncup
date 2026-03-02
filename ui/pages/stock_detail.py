@@ -32,24 +32,28 @@ def render_stock_detail() -> None:
 
     # Ticker input
     results = st.session_state.get("results", pd.DataFrame())
-    if not results.empty and "Ticker" in results.columns:
-        # Filters
-        col_f1, col_f2 = st.columns(2)
-        with col_f1:
-            filter_ma = st.multiselect(
-                "🔗 Filter Status MA",
-                options=["MA Tight", "Tidak MA Tight"],
-                default=["MA Tight", "Tidak MA Tight"],
-                help="Filter berdasarkan kondisi MA Kuncup/MA Ketat",
-            )
-        with col_f2:
-            filter_signal = st.multiselect(
-                "🚀 Filter Status Entry",
-                options=["Sinyal Aktif", "Belum Sinyal"],
-                default=["Sinyal Aktif", "Belum Sinyal"],
-                help="Filter berdasarkan sinyal entry yang valid",
-            )
+    
+    # Status filters - always available
+    st.subheader("🔍 Filter Status")
+    col_f1, col_f2 = st.columns(2)
+    with col_f1:
+        filter_ma = st.multiselect(
+            "🔗 Filter Status MA",
+            options=["MA Tight", "Tidak MA Tight"],
+            default=["MA Tight", "Tidak MA Tight"],
+            help="Filter berdasarkan kondisi MA Kuncup/MA Ketat",
+        )
+    with col_f2:
+        filter_signal = st.multiselect(
+            "🚀 Filter Status Entry",
+            options=["Sinyal Aktif", "Belum Sinyal"],
+            default=["Sinyal Aktif", "Belum Sinyal"],
+            help="Filter berdasarkan sinyal entry yang valid",
+        )
 
+    st.divider()
+    
+    if not results.empty and "Ticker" in results.columns:
         # Apply filters
         filtered_results = results.copy()
         if filter_ma:
