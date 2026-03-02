@@ -178,20 +178,21 @@ def render_history() -> None:
         trend_df["Waktu"] = pd.to_datetime(trend_df["Waktu"], errors="coerce")
 
         if trend_df["Waktu"].notna().any():
+            trend_df["Tanggal"] = trend_df["Waktu"].dt.strftime("%Y-%m-%d")
             trend_df = trend_df.sort_values(["Waktu", "Label"])
-            trend_df["Sumbu_X"] = trend_df["Waktu"].dt.strftime("%Y-%m-%d %H:%M:%S")
         else:
             trend_df = trend_df.sort_values("Label")
-            trend_df["Sumbu_X"] = trend_df["Label"]
+            trend_df["Tanggal"] = trend_df["Label"].astype(str).str[:10]
 
         pivot_df = (
             trend_df.pivot_table(
-                index="Sumbu_X",
+                index="Tanggal",
                 columns="Sumber",
                 values="Sinyal",
                 aggfunc="sum",
                 fill_value=0,
             )
+            .sort_index()
             .reset_index()
         )
 
@@ -206,7 +207,7 @@ def render_history() -> None:
             if source in pivot_df.columns:
                 fig.add_trace(
                     go.Bar(
-                        x=pivot_df["Sumbu_X"],
+                        x=pivot_df["Tanggal"],
                         y=pivot_df[source],
                         name=source,
                         marker_color=source_colors.get(source, "#00bfff"),
@@ -216,7 +217,7 @@ def render_history() -> None:
         fig.update_layout(
             template="plotly_dark",
             height=300,
-            xaxis_title="Waktu Scan",
+            xaxis_title="Tanggal",
             yaxis_title="Jumlah Sinyal",
             margin=dict(l=0, r=0, t=10, b=0),
             barmode="group",
