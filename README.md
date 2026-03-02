@@ -2,7 +2,7 @@
 
 Screener saham otomatis untuk mendeteksi pola **MA Kuncup / MA Ketat** di Bursa Efek Indonesia (BEI).
 
-Berdasarkan artikel **[@ikhwanuddin](https://x.com/ikhwanuddin/status/2028329791657541637)** yang merujuk teknik **Pak T [@TradingDiary2](https://x.com/TradingDiary2)**.
+Berdasarkan artikel [@ikhwanuddin](https://x.com/ikhwanuddin/status/2028329791657541637) yang merujuk teknik **Pak T [@TradingDiary2](https://x.com/TradingDiary2)**.
 
 ---
 
@@ -22,6 +22,10 @@ Artikel referensi: [Singkap Rahasia Pola MA Ketat — Chart Visual Jadi Pertidak
 - **Close (C)** — harga penutupan hari ini
 - **MA100** — MA tren jangka panjang (filter sinyal)
 
+```
+MA_n(t) = (1/n) × Σ(i=0 to n-1) C(t-i)
+```
+
 ### Tick Size BEI
 
 | Harga (Rp)       | Fraksi Harga (Tick) |
@@ -31,6 +35,20 @@ Artikel referensi: [Singkap Rahasia Pola MA Ketat — Chart Visual Jadi Pertidak
 | 501 – 2.000      | 5                   |
 | 2.001 – 5.000    | 10                  |
 | > 5.000          | 25                  |
+
+### Rentang MA dalam Tick
+
+```
+MA_max(t) = max(C, MA3, MA5, MA10, MA20, MA50)
+MA_min(t) = min(C, MA3, MA5, MA10, MA20, MA50)
+range_ticks(t) = (MA_max - MA_min) / tick_size(C)
+```
+
+### Volatilitas (Rolling 10 Hari)
+
+```
+vol_pct(t) = std_dev((C(t) - C(t-1)) / C(t-1), rolling 10 hari) × 100%
+```
 
 ### Kondisi MA Menguncup (`ma_tight`)
 
@@ -51,41 +69,7 @@ signal = True jika:
 
 ---
 
-## UI Dashboard
-
-Screener ini dilengkapi dengan antarmuka web berbasis **Streamlit** yang interaktif.
-
-### Cara Menjalankan UI
-
-```bash
-# Install dependensi
-pip install -r requirements.txt
-
-# Jalankan UI
-streamlit run app.py
-```
-
-UI akan terbuka di browser pada `http://localhost:8501`.
-
-### Fitur Dashboard
-
-| Halaman        | Fitur                                                                 |
-|----------------|-----------------------------------------------------------------------|
-| 🏠 Dashboard   | Parameter tuning, jalankan screener, tabel hasil, download CSV        |
-| 📈 Detail Saham | Chart harga + MA interaktif (Plotly), tabel indikator per saham      |
-| 📅 Riwayat     | Hasil scan historis, tren sinyal antar tanggal                        |
-
-### Parameter yang Bisa Di-tuning (Sidebar)
-
-| Parameter              | Default    | Range         |
-|------------------------|------------|---------------|
-| Range Ticks Threshold  | 6          | 1 – 20        |
-| Volatilitas Threshold  | 3.8%       | 0.5% – 10%    |
-| Volume Minimum         | 1.000.000  | 0 – 10.000.000|
-
----
-
-## Instalasi & Cara Menjalankan (CLI)
+## Instalasi & Cara Menjalankan
 
 ### 1. Clone repository
 
@@ -100,26 +84,13 @@ cd screener-ma-kuncup
 pip install -r requirements.txt
 ```
 
-### 3. Jalankan screener (CLI)
+### 3. Jalankan screener
 
 ```bash
 python main.py
 ```
 
-### 4. Jalankan UI
-
-```bash
-streamlit run app.py
-```
-
----
-
-## Docker
-
-```bash
-docker build -t screener-ma-kuncup .
-docker run -p 8501:8501 screener-ma-kuncup
-```
+Screener akan membaca daftar saham dari `stocks.csv`, mengambil data historis dari Yahoo Finance, menghitung semua indikator, lalu menampilkan tabel hasil beserta saham-saham yang memenuhi sinyal MA Kuncup.
 
 ---
 
@@ -127,37 +98,37 @@ docker run -p 8501:8501 screener-ma-kuncup
 
 ```
 screener-ma-kuncup/
-├── app.py                      # Entry point Streamlit UI
-├── main.py                     # Entry point CLI
+├── README.md
 ├── requirements.txt
-├── stocks.csv                  # Daftar saham populer BEI
-├── Dockerfile
-├── .streamlit/
-│   └── config.toml             # Konfigurasi tema Streamlit
 ├── screener/
 │   ├── __init__.py
-│   ├── config.py               # Parameter & threshold
-│   ├── tick_size.py            # Aturan fraksi harga BEI
-│   ├── indicators.py           # MA, range_ticks, volatilitas
-│   ├── screener.py             # Logika deteksi sinyal
-│   └── data.py                 # Pengambilan data dari yfinance
-├── ui/
-│   ├── __init__.py
-│   ├── components.py           # Komponen UI reusable
-│   ├── styles.py               # Custom CSS
-│   └── pages/
-│       ├── __init__.py
-│       ├── dashboard.py        # Halaman utama
-│       ├── stock_detail.py     # Detail per saham
-│       └── history.py          # Riwayat hasil
-├── data/
-│   └── results/                # Hasil scan harian (dari GitHub Actions)
+│   ├── config.py        # Parameter & threshold yang bisa di-tuning
+│   ├── tick_size.py     # Aturan fraksi harga BEI
+│   ├── indicators.py    # Perhitungan MA, range_ticks, volatilitas
+│   ├── screener.py      # Logika deteksi sinyal
+│   └── data.py          # Pengambilan data dari yfinance
+├── stocks.csv           # Daftar saham BEI yang di-screen
+├── main.py              # Entry point
 └── tests/
     ├── __init__.py
     ├── test_tick_size.py
     ├── test_indicators.py
     └── test_screener.py
 ```
+
+---
+
+## Parameter yang Bisa Di-tuning (`screener/config.py`)
+
+| Parameter              | Default | Keterangan                                    |
+|------------------------|---------|-----------------------------------------------|
+| `RANGE_TICKS_THRESHOLD`| `6`     | Batas maksimum rentang MA dalam tick          |
+| `VOL_PCT_THRESHOLD`    | `3.8`   | Batas maksimum volatilitas harian (%)         |
+| `MIN_VOLUME`           | `1e6`   | Volume minimum untuk sinyal valid             |
+| `MA_PERIODS`           | `[3,5,10,20,50]` | Periode MA yang digunakan           |
+| `MA_TREND_PERIOD`      | `100`   | Periode MA tren (MA100)                       |
+| `VOL_ROLLING_PERIOD`   | `10`    | Periode rolling untuk kalkulasi volatilitas   |
+| `DATA_PERIOD`          | `"1y"`  | Periode historis data yang diambil            |
 
 ---
 
