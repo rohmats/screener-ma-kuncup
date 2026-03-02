@@ -115,6 +115,7 @@ def render_price_chart(df: pd.DataFrame, ticker: str) -> None:
                 low=df["Low"],
                 close=df["Close"],
                 name="OHLC",
+                visible='legendonly',  # Default collapsed
                 increasing_line_color="#26a69a",
                 increasing_fillcolor="#26a69a",
                 decreasing_line_color="#ef5350",
@@ -159,6 +160,7 @@ def render_price_chart(df: pd.DataFrame, ticker: str) -> None:
                 go.Scatter(
                     x=df.index, y=df[ma_col],
                     name=ma_col,
+                    visible='legendonly',  # Default collapsed
                     line=dict(color=color, width=1),
                     opacity=0.8,
                     hovertemplate=f"{ma_col}: %{{y:,.2f}}<extra></extra>",
@@ -203,7 +205,19 @@ def render_price_chart(df: pd.DataFrame, ticker: str) -> None:
         template="plotly_dark",
         height=600,
         showlegend=True,
-        legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
+        legend=dict(
+            orientation="v",
+            yanchor="top",
+            y=0.98,
+            xanchor="left",
+            x=0.01,
+            bgcolor="rgba(0,0,0,0.5)",
+            bordercolor="rgba(255,255,255,0.2)",
+            borderwidth=1,
+            font=dict(size=10),
+            itemclick="toggle",
+            itemdoubleclick="toggleothers",
+        ),
         xaxis_rangeslider_visible=False,
         margin=dict(l=0, r=0, t=30, b=0),
         hovermode="x unified",
