@@ -13,10 +13,19 @@ from ui.components import render_price_chart
 
 RESULTS_DIR = Path(__file__).parent.parent.parent / "data" / "results"
 
+# Default parameters (fallback)
+DEFAULT_RANGE_TICKS_THRESHOLD = 6
+DEFAULT_VOL_PCT_THRESHOLD = 3.8
 
-@st.cache_data(ttl=300)
-def _fetch_and_compute(ticker: str) -> pd.DataFrame:
-    """Fetch stock data and compute all indicators, cached for 5 minutes."""
+
+def _fetch_and_compute(ticker: str, range_ticks_threshold: float = None, vol_pct_threshold: float = None) -> pd.DataFrame:
+    """Fetch stock data and compute all indicators with configurable thresholds."""
+    # Use session state parameters if available, otherwise fallback to defaults
+    if range_ticks_threshold is None:
+        range_ticks_threshold = st.session_state.get("range_ticks_threshold", DEFAULT_RANGE_TICKS_THRESHOLD)
+    if vol_pct_threshold is None:
+        vol_pct_threshold = st.session_state.get("vol_pct_threshold", DEFAULT_VOL_PCT_THRESHOLD)
+    
     df = fetch_stock_data(ticker)
     if df is None or df.empty:
         return pd.DataFrame()
@@ -24,7 +33,7 @@ def _fetch_and_compute(ticker: str) -> pd.DataFrame:
         return df
     df = calculate_all_indicators(df)
     df["MA_Tight"] = (
-        (df["Range_Ticks"] < 6) & (df["Vol_Pct"] < 3.8)
+        (df["Range_Ticks"] < range_ticks_threshold) & (df["Vol_Pct"] < vol_pct_threshold)
     )
     return df
 
@@ -55,6 +64,10 @@ def render_stock_detail() -> None:
     session_results = st.session_state.get("results", pd.DataFrame())
     history_results = _load_latest_history_results() if session_results.empty else pd.DataFrame()
     results = session_results if not session_results.empty else history_results
+    
+    # Show info if using historical results
+    if session_results.empty and not history_results.empty:
+        st.info("ℹ️ Screener belum dijalankan pada sesi ini. Daftar ticker diambil dari riwayat terbaru.")
     
     # Status filters - always available
     st.subheader("🔍 Filter Status")
@@ -116,8 +129,12 @@ def render_stock_detail() -> None:
         st.warning("Masukkan kode saham terlebih dahulu.")
         return
 
+    # Get parameters from session state (from dashboard or use defaults)
+    range_ticks_threshold = st.session_state.get("range_ticks_threshold", DEFAULT_RANGE_TICKS_THRESHOLD)
+    vol_pct_threshold = st.session_state.get("vol_pct_threshold", DEFAULT_VOL_PCT_THRESHOLD)
+    
     with st.spinner(f"Mengambil data {ticker}..."):
-        df = _fetch_and_compute(ticker)
+        df = _fetch_and_compute(ticker, range_ticks_threshold, vol_pct_threshold)
 
     if df.empty:
         st.error(
@@ -126,12 +143,32 @@ def render_stock_detail() -> None:
         )
         return
 
+    # Show parameters being used
+    with st.expander("⚙️ Parameter yang Digunakan", expanded=False):
+        param_col1, param_col2, param_col3 = st.columns(3)
+        with param_col1:
+            st.metric("Range Ticks", f"< {range_ticks_threshold}")
+        with param_col2:
+            st.metric("Vol Pct", f"< {vol_pct_threshold}%")
+        with param_col3:
+            min_volume = st.session_state.get("min_volume", 1_000_000)
+            st.metric("Min Volume", f"{min_volume:,.0f}")
+        st.caption("Parameter ini digunakan untuk menghitung MA Tight dan Signal. Jika data tidak sesuai, kemungkinan parameter berbeda dari hasil riwayat.")
+
+    st.divider()
+    
     # Status badges
     latest = df.iloc[-1]
     ma_tight_val = latest.get("MA_Tight", False)
+    min_volume = st.session_state.get("min_volume", 1_000_000)
     signal_val = False
-    if "Range_Ticks" in latest and "Vol_Pct" in latest:
-        signal_val = is_signal(latest)
+    if "Range_Ticks" in latest and "Vol_Pct" in latest and "Volume" in latest and "MA100" in latest:
+        # Compute signal using current parameters
+        signal_val = (
+            bool(ma_tight_val)
+            and latest["Volume"] > min_volume
+            and latest["MA100"] <= latest["Close"]
+        )
 
     col1, col2, col3 = st.columns(3)
     with col1:

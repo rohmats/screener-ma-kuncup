@@ -170,7 +170,10 @@ def render_dashboard() -> None:
         st.session_state["results"] = results
         st.session_state["scan_time"] = datetime.now().strftime("%H:%M:%S")
         st.session_state["symbols_scanned"] = len(symbols)
-
+        # Store parameters in session state for detail page to use
+        st.session_state["range_ticks_threshold"] = range_ticks
+        st.session_state["vol_pct_threshold"] = vol_pct
+        st.session_state["min_volume"] = min_volume
     # --- Display results ---
     results = st.session_state.get("results", pd.DataFrame())
     scan_time = st.session_state.get("scan_time", "-")
