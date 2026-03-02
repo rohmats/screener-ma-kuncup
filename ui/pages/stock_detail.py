@@ -159,7 +159,7 @@ def render_stock_detail() -> None:
         "Range_Ticks", "Vol_Pct", "Volume", "MA_Tight",
     ]
     available_cols = [c for c in indicator_cols if c in df.columns]
-    recent_df = df[available_cols].tail(20).copy()
+    recent_df = df[available_cols].tail(20).copy().sort_index(ascending=False)
     recent_df.index = recent_df.index.strftime("%d-%m-%Y")
 
     # Format boolean columns
