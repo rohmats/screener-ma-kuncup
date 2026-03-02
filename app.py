@@ -9,9 +9,12 @@ st.set_page_config(
     initial_sidebar_state="collapsed",
 )
 
-from ui.styles import inject_custom_css
-
-inject_custom_css(st)
+# Inject custom CSS
+try:
+    from ui.styles import inject_custom_css
+    inject_custom_css(st)
+except Exception:
+    pass  # Fallback gracefully if styles cannot be loaded
 
 # Navigation using tabs
 tab1, tab2, tab3 = st.tabs(["🏠 Dashboard", "📈 Detail Saham", "📅 Riwayat"])
