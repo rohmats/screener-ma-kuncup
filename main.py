@@ -70,7 +70,7 @@ def main():
 
     # Save results if requested
     if args.save:
-        timestamp = now_jakarta().strftime("%d-%m-%Y_%H%M%S")
+        timestamp = now_jakarta().strftime("%Y%m%d_%H%M%S")
         output_file = os.path.join(
             os.path.dirname(__file__),
             "data",
