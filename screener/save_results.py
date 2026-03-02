@@ -10,23 +10,16 @@ from screener.time_utils import now_jakarta
 
 
 def save_screener_results(df: pd.DataFrame, output_dir: str = "data/results", source: str = "screener") -> None:
-    """Save screener results to CSV files with a date-time-based filename.
+    """Save screener results to CSV file with a date-time-based filename.
 
-    Two files are written:
-    - ``{output_dir}/YYYYMMDD_HHMMSS_source.csv`` — all processed tickers.
-    - ``{output_dir}/YYYYMMDD_HHMMSS_source_signals.csv``  — only tickers where Signal is True.
+    File format: ``{output_dir}/YYYYMMDD_HHMMSS_source.csv``
+    Contains all processed tickers. Filter by Signal column to get signals only.
     """
     os.makedirs(output_dir, exist_ok=True)
     timestamp = now_jakarta().strftime("%Y%m%d_%H%M%S")
 
     screener_path = os.path.join(output_dir, f"{timestamp}_{source}.csv")
     df.to_csv(screener_path, index=False)
-    print(f"[save_results] Saved {len(df)} rows to {screener_path}")
-
-    signals = df[df["Signal"]]
-    if not signals.empty:
-        signals_path = os.path.join(output_dir, f"{timestamp}_{source}_signals.csv")
-        signals.to_csv(signals_path, index=False)
-        print(f"[save_results] Saved {len(signals)} signals to {signals_path}")
-    else:
-        print("[save_results] No signals found today.")
+    
+    signal_count = int(df["Signal"].sum()) if "Signal" in df.columns else 0
+    print(f"[save_results] Saved {len(df)} rows ({signal_count} signals) to {screener_path}")
