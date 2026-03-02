@@ -8,7 +8,8 @@ from screener import config
 
 def fetch_stock_data(ticker: str, period: str = config.DATA_PERIOD) -> pd.DataFrame:
     """Fetch OHLCV data from yfinance for a BEI stock (appends .JK suffix)."""
-    symbol = f"{ticker}.JK"
+    ticker = str(ticker).strip().upper()
+    symbol = ticker if ticker.endswith(".JK") else f"{ticker}.JK"
     df = yf.download(symbol, period=period, auto_adjust=True, progress=False)
     if df.empty:
         return df

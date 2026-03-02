@@ -9,6 +9,7 @@ import os
 import time
 import requests
 import pandas as pd
+import yfinance as yf
 
 _DEFAULT_CSV = os.path.join(os.path.dirname(__file__), "..", "data", "all_stocks.csv")
 
@@ -101,6 +102,41 @@ def fetch_all_bei_tickers(
         save_stock_list(tickers, csv_path)
 
     return tickers
+
+
+def fetch_all_bei_tickers_from_yahoo(
+    csv_path: str = _DEFAULT_CSV,
+    update_csv: bool = True,
+) -> list[str]:
+    """Fetch BEI symbols from Yahoo screener using yfinance.
+
+    Uses `region=id` + `exchange=JKT` and paginates all results.
+    Returns symbols with `.JK` suffix.
+    """
+    query = yf.EquityQuery(
+        "and",
+        [
+            yf.EquityQuery("eq", ["region", "id"]),
+            yf.EquityQuery("eq", ["exchange", "JKT"]),
+        ],
+    )
+
+    first_page = yf.screen(query, size=250, offset=0)
+    total = int(first_page.get("total") or 0)
+
+    symbols: list[str] = []
+    for offset in range(0, total, 250):
+        page = yf.screen(query, size=250, offset=offset)
+        quotes = page.get("quotes", [])
+        symbols.extend([q.get("symbol", "").strip().upper() for q in quotes if q.get("symbol")])
+
+    symbols = [s for s in symbols if s]
+    symbols = list(dict.fromkeys(symbols))
+
+    if update_csv and symbols:
+        save_stock_list(symbols, csv_path)
+
+    return symbols
 
 
 def save_stock_list(tickers: list[str], filepath: str = _DEFAULT_CSV) -> None:

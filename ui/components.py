@@ -20,9 +20,11 @@ def render_metric_cards(total: int, ma_tight_count: int, signal_count: int, time
 
 
 def style_signal_rows(df: pd.DataFrame) -> "pd.io.formats.style.Styler":
-    """Apply green highlight to rows where Signal == True."""
+    """Apply green highlight to rows where Signal == True/✅."""
+
     def highlight_signal(row):
-        if row.get("Signal") is True or row.get("Signal") == 1:
+        signal_value = row.get("Signal")
+        if signal_value is True or signal_value == 1 or signal_value == "✅":
             return ["background-color: rgba(0, 200, 100, 0.15); color: #00c864"] * len(row)
         return [""] * len(row)
 
@@ -42,19 +44,50 @@ def render_results_table(df: pd.DataFrame, show_signals_only: bool = False) -> N
             st.info("Tidak ada saham dengan sinyal MA Kuncup saat ini.")
             return
 
-    # Format numeric columns
-    float_cols = ["Close", "MA3", "MA5", "MA10", "MA20", "MA50", "MA100", "Range_Ticks", "Vol_Pct"]
-    for col in float_cols:
-        if col in display_df.columns:
-            display_df[col] = display_df[col].round(2)
+    preferred_order = [
+        "Ticker",
+        "Close",
+        "MA3",
+        "MA5",
+        "MA10",
+        "MA20",
+        "MA50",
+        "MA100",
+        "Range_Ticks",
+        "Vol_Pct",
+        "Volume",
+        "MA_Tight",
+        "Signal",
+    ]
+    display_df = display_df[[c for c in preferred_order if c in display_df.columns]]
 
-    if "Volume" in display_df.columns:
-        display_df["Volume"] = display_df["Volume"].apply(
-            lambda v: f"{int(v):,}" if pd.notna(v) else "-"
+    if {"Signal", "MA_Tight", "Range_Ticks", "Vol_Pct"}.issubset(display_df.columns):
+        display_df = display_df.sort_values(
+            by=["Signal", "MA_Tight", "Range_Ticks", "Vol_Pct"],
+            ascending=[False, False, True, True],
         )
 
-    styled = style_signal_rows(display_df)
-    st.dataframe(styled, use_container_width=True, hide_index=True)
+    for col in ["Signal", "MA_Tight"]:
+        if col in display_df.columns:
+            display_df[col] = display_df[col].map(lambda v: "✅" if bool(v) else "❌")
+
+    styled = style_signal_rows(display_df).format(
+        {
+            "Close": "{:,.2f}",
+            "MA3": "{:,.2f}",
+            "MA5": "{:,.2f}",
+            "MA10": "{:,.2f}",
+            "MA20": "{:,.2f}",
+            "MA50": "{:,.2f}",
+            "MA100": "{:,.2f}",
+            "Range_Ticks": "{:,.2f}",
+            "Vol_Pct": "{:,.2f}%",
+            "Volume": "{:,.0f}",
+        },
+        na_rep="-",
+    )
+
+    st.dataframe(styled, width="stretch", hide_index=True)
 
 
 def render_price_chart(df: pd.DataFrame, ticker: str) -> None:

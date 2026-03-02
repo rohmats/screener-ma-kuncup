@@ -7,11 +7,14 @@ import pandas as pd
 import streamlit as st
 
 from screener.data import fetch_stock_data, load_stock_list
+from screener.fetch_bei_stocks import fetch_all_bei_tickers_from_yahoo
 from screener.indicators import calculate_all_indicators
 from ui.components import render_metric_cards, render_results_table
 
-STOCKS_FILE = os.path.join(os.path.dirname(__file__), "..", "..", "stocks.csv")
-STOCKS_FILE = os.path.abspath(STOCKS_FILE)
+BEI_STOCKS_FILE = os.path.join(os.path.dirname(__file__), "..", "..", "data", "bei_stocks.csv")
+BEI_STOCKS_FILE = os.path.abspath(BEI_STOCKS_FILE)
+YAHOO_STOCKS_FILE = os.path.join(os.path.dirname(__file__), "..", "..", "data", "all_stocks.csv")
+YAHOO_STOCKS_FILE = os.path.abspath(YAHOO_STOCKS_FILE)
 
 
 def _screen_with_params(
@@ -69,50 +72,26 @@ def cached_run_screener(
 
 
 def _get_bei_symbols() -> list:
-    """Return a hardcoded list of all major BEI stocks."""
-    return [
-        "AALI", "ABBA", "ABDA", "ABMM", "ACES", "ACST", "ADHI", "ADMF", "ADMG", "ADRO",
-        "AGII", "AGRO", "AHAP", "AISA", "AKRA", "ALDO", "ALII", "ALKA", "ALMI", "ALTO",
-        "AMFG", "AMRT", "ANDI", "ANTM", "APEX", "APII", "APLN", "ARNA", "ARTI", "ASBI",
-        "ASDM", "ASII", "ASJT", "ASLC", "ASMI", "ASRM", "ATPK", "AUTO", "BALI", "BAPA",
-        "BATA", "BBCA", "BBHI", "BBKP", "BBMD", "BBNI", "BBRI", "BBTN", "BBYB", "BCAP",
-        "BCIC", "BCIP", "BDMN", "BEKS", "BFIN", "BGTG", "BHAT", "BHIT", "BIMA", "BJTM",
-        "BKSL", "BKSW", "BLTZ", "BMRI", "BMTR", "BNBA", "BNGA", "BNII", "BNLI", "BPFI",
-        "BRAM", "BREN", "BRNA", "BRPT", "BSDE", "BSIM", "BSSR", "BTEL", "BTON", "BUDI",
-        "BULL", "BUMI", "BUVA", "BVIC", "CARS", "CASA", "CASH", "CASS", "CBMF", "CEKA",
-        "CFIN", "CITA", "CITY", "CLEO", "CLPI", "CMNP", "CMRY", "CNKO", "COCO", "CPNG",
-        "CPIN", "CPRI", "CSAP", "CSIS", "CTRA", "CTTH", "DADA", "DAJK", "DART", "DEWA",
-        "DFAM", "DGIK", "DILD", "DKFT", "DLTA", "DMAS", "DNET", "DPUM", "DSSA", "DUTI",
-        "DVLA", "ECII", "EKAD", "ELSA", "EMDE", "EMTK", "ENRG", "EPMT", "ERAA", "ERTX",
-        "ESSA", "EXCL", "FAPA", "FAST", "FILM", "FISH", "FMII", "FOOD", "FPNI", "GAMA",
-        "GJTL", "GLOB", "GLVA", "GMTD", "GOLL", "GOOD", "GOTO", "GPRA", "GSMF", "GTBO",
-        "GWSA", "GZCO", "HADE", "HDFA", "HELI", "HMSP", "HOKI", "HRUM", "IATA", "IBST",
-        "ICBP", "ICON", "IGAR", "IIKP", "IKAI", "IKBI", "IMAS", "IMJS", "IMPC", "INAF",
-        "INAI", "INCI", "INCO", "INDF", "INDO", "INDX", "INDY", "INKP", "INPC", "INPP",
-        "INRU", "INTA", "INTD", "INTP", "ISAT", "ITMG", "IVIA", "JAWA", "JECC", "JPFA",
-        "JRPT", "JSMR", "JSPT", "JTPE", "KAEF", "KAQI", "KARW", "KBLI", "KBLM", "KBLV",
-        "KDSI", "KEJU", "KIAS", "KICI", "KIJA", "KINO", "KLBF", "KMDS", "KMTR", "KOIN",
-        "KOPI", "KPIG", "KPLI", "KRBL", "KREN", "LPCK", "LPKR", "LPLI", "LPPF", "LPPS",
-        "LSIP", "LTLS", "MAIN", "MAPA", "MAPI", "MASA", "MBAP", "MBSS", "MCAS", "MDIA",
-        "MDKA", "MDLN", "MEDC", "MEGA", "MFIN", "MFMI", "MGRO", "MIDI", "MIKA", "MKPI",
-        "MLBI", "MLPT", "MMLP", "MNCN", "MPPA", "MPXL", "MRAT", "MREI", "MSKY", "MTDL",
-        "MTLA", "MTRA", "MTWI", "MYOH", "MYOR", "NAGA", "NASA", "NELY", "NETA", "NISP",
-        "NOBU", "NRCA", "NTBK", "NUSA", "NZIA", "OCAP", "OKAS", "OMRE", "PANI", "PANR",
-        "PANS", "PBID", "PBSA", "PGAS", "PGEO", "PGLI", "PICO", "PJAA", "PKPK", "PLAS",
-        "PLIN", "PMJS", "PMMP", "PNBS", "PNIN", "PNLF", "PNSE", "PODF", "POLI", "POOL",
-        "PORT", "PPGL", "PPRE", "PPRO", "PSGO", "PSKT", "PSSI", "PTBA", "PTIS", "PTPP",
-        "PTRO", "PTSP", "PUDP", "PURA", "PURE", "RAJA", "RANC", "RATU", "RBMS", "RDTX",
-        "RELI", "RICY", "RIGS", "RMBA", "ROTI", "RUIS", "SAME", "SATU", "SBMA", "SCCO",
-        "SCMA", "SDMU", "SDPC", "SDRA", "SEMA", "SFAN", "SGER", "SGRO", "SIDO", "SILO",
-        "SIMP", "SIPD", "SKBM", "SKLT", "SMBR", "SMDR", "SMGR", "SMIL", "SMMA", "SMMT",
-        "SMRA", "SMSM", "SNLK", "SOHO", "SONA", "SOTS", "SPMA", "SRAJ", "SRIL", "SRSN",
-        "SRTG", "SSMS", "STAR", "STTP", "SUGI", "SSTM", "TBIG", "TBLA", "TCID", "TELE",
-        "TFAS", "TGKA", "TINS", "TKIM", "TLKM", "TMPI", "TMPO", "TNCA", "TOPS", "TOTL",
-        "TOWR", "TPMA", "TRIM", "TRIL", "TRIO", "TRJA", "TRST", "TRUS", "TSPC", "TURI",
-        "UANG", "UNIT", "UNSP", "UNTR", "UNVR", "VICO", "VINS", "VKTR", "VOKS", "VRNA",
-        "WAPO", "WEGE", "WEHA", "WIKA", "WINS", "WIIM", "WOOD", "WSBP", "WSKT", "WTON",
-        "YELO", "YULE",
-    ]
+    """Load BEI symbols from cached IDX list (around 500+ symbols)."""
+    try:
+        symbols = load_stock_list(BEI_STOCKS_FILE)
+    except FileNotFoundError:
+        return []
+
+    # Keep order, remove duplicates/empty values.
+    cleaned = [s for s in symbols if isinstance(s, str) and s.strip()]
+    return list(dict.fromkeys(cleaned))
+
+
+def _get_yahoo_symbols() -> list:
+    """Load BEI symbols from Yahoo screener cache (around 800+ symbols)."""
+    try:
+        symbols = load_stock_list(YAHOO_STOCKS_FILE)
+    except FileNotFoundError:
+        return []
+
+    cleaned = [s for s in symbols if isinstance(s, str) and s.strip()]
+    return list(dict.fromkeys(cleaned))
 
 
 def render_dashboard() -> None:
@@ -158,8 +137,13 @@ def render_dashboard() -> None:
 
         data_source = st.selectbox(
             "Sumber Data",
-            options=["Saham Populer (stocks.csv)", "Semua Saham BEI"],
+            options=["Saham BEI (±500, cache IDX)", "Saham Yahoo (±800, cache yfinance)"],
             index=0,
+        )
+
+        refresh_all_stocks = st.button(
+            "🔄 Update saham Yahoo (800-an)",
+            use_container_width=True,
         )
 
         show_signals_only = st.checkbox("Tampilkan hanya sinyal", value=False)
@@ -169,15 +153,26 @@ def render_dashboard() -> None:
         st.divider()
         st.caption("ℹ️ Data diambil dari Yahoo Finance (yfinance).")
 
+    if refresh_all_stocks:
+        with st.spinner("Memperbarui daftar saham BEI dari Yahoo..."):
+            try:
+                refreshed = fetch_all_bei_tickers_from_yahoo(csv_path=YAHOO_STOCKS_FILE, update_csv=True)
+            except Exception as exc:  # noqa: BLE001
+                st.error(f"Gagal update daftar saham dari Yahoo: {exc}")
+            else:
+                st.success(f"Berhasil update {len(refreshed)} ticker ke all_stocks.csv")
+
     # --- Load stock list ---
-    if data_source == "Saham Populer (stocks.csv)":
-        try:
-            symbols = load_stock_list(STOCKS_FILE)
-        except FileNotFoundError:
-            st.error(f"File stocks.csv tidak ditemukan di: {STOCKS_FILE}")
+    if data_source == "Saham BEI (±500, cache IDX)":
+        symbols = _get_bei_symbols()
+        if not symbols:
+            st.error(f"File bei_stocks.csv tidak ditemukan di: {BEI_STOCKS_FILE}")
             return
     else:
-        symbols = _get_bei_symbols()
+        symbols = _get_yahoo_symbols()
+        if not symbols:
+            st.error(f"File all_stocks.csv tidak ditemukan di: {YAHOO_STOCKS_FILE}")
+            return
 
     # --- Run screener on button press ---
     if run_button:
