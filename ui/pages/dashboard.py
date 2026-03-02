@@ -148,9 +148,9 @@ def render_dashboard() -> None:
 
         # Dynamic button label based on selected data source
         if data_source == "Saham BEI (±500, cache IDX)":
-            button_label = "🔄 Update saham BEI (500-an)"
+            button_label = "🔄 Update saham BEI"
         else:
-            button_label = "🔄 Update saham Yahoo (800-an)"
+            button_label = "🔄 Update saham Yahoo"
         
         col_btn1, col_btn2, col_btn3 = st.columns(3)
         
