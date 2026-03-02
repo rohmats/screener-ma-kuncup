@@ -141,8 +141,14 @@ def render_dashboard() -> None:
             index=0,
         )
 
+        # Dynamic button label based on selected data source
+        if data_source == "Saham BEI (±500, cache IDX)":
+            button_label = "🔄 Update saham BEI (500-an)"
+        else:
+            button_label = "🔄 Update saham Yahoo (800-an)"
+        
         refresh_all_stocks = st.button(
-            "🔄 Update saham Yahoo (800-an)",
+            button_label,
             use_container_width=True,
         )
 
@@ -154,13 +160,23 @@ def render_dashboard() -> None:
         st.caption("ℹ️ Data diambil dari Yahoo Finance (yfinance).")
 
     if refresh_all_stocks:
-        with st.spinner("Memperbarui daftar saham BEI dari Yahoo..."):
-            try:
-                refreshed = fetch_all_bei_tickers_from_yahoo(csv_path=YAHOO_STOCKS_FILE, update_csv=True)
-            except Exception as exc:  # noqa: BLE001
-                st.error(f"Gagal update daftar saham dari Yahoo: {exc}")
-            else:
-                st.success(f"Berhasil update {len(refreshed)} ticker ke all_stocks.csv")
+        if data_source == "Saham BEI (±500, cache IDX)":
+            with st.spinner("Memperbarui daftar saham BEI dari IDX API..."):
+                try:
+                    from screener.fetch_bei_stocks import fetch_all_bei_tickers
+                    refreshed = fetch_all_bei_tickers(csv_path=BEI_STOCKS_FILE, update_csv=True)
+                except Exception as exc:  # noqa: BLE001
+                    st.error(f"Gagal update daftar saham dari IDX: {exc}")
+                else:
+                    st.success(f"Berhasil update {len(refreshed)} ticker ke bei_stocks.csv")
+        else:
+            with st.spinner("Memperbarui daftar saham BEI dari Yahoo..."):
+                try:
+                    refreshed = fetch_all_bei_tickers_from_yahoo(csv_path=YAHOO_STOCKS_FILE, update_csv=True)
+                except Exception as exc:  # noqa: BLE001
+                    st.error(f"Gagal update daftar saham dari Yahoo: {exc}")
+                else:
+                    st.success(f"Berhasil update {len(refreshed)} ticker ke all_stocks.csv")
 
     # --- Load stock list ---
     if data_source == "Saham BEI (±500, cache IDX)":
