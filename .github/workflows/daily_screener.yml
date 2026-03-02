@@ -1,0 +1,37 @@
+name: Daily MA Kuncup Screener
+
+on:
+  schedule:
+    # 17:00 WIB = 10:00 UTC, Monday–Friday (market days only)
+    - cron: '0 10 * * 1-5'
+  workflow_dispatch:  # Allow manual trigger from GitHub Actions UI
+
+jobs:
+  run-screener:
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: write  # Required to commit and push results back to the repo
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run screener (all BEI stocks)
+        run: python main.py --all --save
+
+      - name: Commit and push results
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add data/
+          git diff --staged --quiet || git commit -m "📊 Screener results $(date +%Y-%m-%d)"
+          git push
