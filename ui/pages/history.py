@@ -11,6 +11,24 @@ import streamlit as st
 RESULTS_DIR = Path(__file__).parent.parent.parent / "data" / "results"
 
 
+def _to_bool_value(value) -> bool:
+    """Normalize mixed boolean-like values from CSV into strict booleans."""
+    if pd.isna(value):
+        return False
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, (int, float)):
+        return value != 0
+    if isinstance(value, str):
+        return value.strip().lower() in {"true", "1", "yes", "y", "on", "aktif"}
+    return bool(value)
+
+
+def _to_bool_series(series: pd.Series) -> pd.Series:
+    """Normalize a series containing bool/int/string flags into strict booleans."""
+    return series.apply(_to_bool_value).astype(bool)
+
+
 def _list_result_files() -> list:
     """Scan data/results/ for CSV files and return sorted list of paths."""
     if not RESULTS_DIR.exists():
@@ -121,8 +139,10 @@ def render_history() -> None:
 
     # Summary for selected date
     total = len(df)
-    ma_tight_count = int(df["MA_Tight"].sum()) if "MA_Tight" in df.columns else 0
-    signal_count = int(df["Signal"].sum()) if "Signal" in df.columns else 0
+    ma_tight_series = _to_bool_series(df["MA_Tight"]) if "MA_Tight" in df.columns else pd.Series(dtype=bool)
+    signal_series = _to_bool_series(df["Signal"]) if "Signal" in df.columns else pd.Series(dtype=bool)
+    ma_tight_count = int(ma_tight_series.sum()) if not ma_tight_series.empty else 0
+    signal_count = int(signal_series.sum()) if not signal_series.empty else 0
 
     col1, col2, col3 = st.columns(3)
     col1.metric("Total Saham", total)
@@ -150,6 +170,10 @@ def render_history() -> None:
         )
 
     filtered_df = df.copy()
+    if "MA_Tight" in filtered_df.columns:
+        filtered_df["MA_Tight"] = _to_bool_series(filtered_df["MA_Tight"])
+    if "Signal" in filtered_df.columns:
+        filtered_df["Signal"] = _to_bool_series(filtered_df["Signal"])
 
     if "MA_Tight" in filtered_df.columns and filter_ma:
         if "MA Tight" in filter_ma and "Tidak MA Tight" not in filter_ma:
@@ -190,7 +214,7 @@ def render_history() -> None:
     for filepath in result_files:
         try:
             temp_df = _read_result_csv(str(filepath))
-            signals = int(temp_df["Signal"].sum()) if "Signal" in temp_df.columns else 0
+            signals = int(_to_bool_series(temp_df["Signal"]).sum()) if "Signal" in temp_df.columns else 0
             metadata = _extract_result_metadata(filepath)
             trend_data.append({
                 "Label": metadata["label"],

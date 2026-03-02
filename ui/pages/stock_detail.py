@@ -20,6 +20,24 @@ DEFAULT_RANGE_TICKS_THRESHOLD = 6
 DEFAULT_VOL_PCT_THRESHOLD = 3.8
 
 
+def _to_bool_value(value) -> bool:
+    """Normalize mixed boolean-like values from CSV/session state."""
+    if pd.isna(value):
+        return False
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, (int, float)):
+        return value != 0
+    if isinstance(value, str):
+        return value.strip().lower() in {"true", "1", "yes", "y", "on", "aktif"}
+    return bool(value)
+
+
+def _to_bool_series(series: pd.Series) -> pd.Series:
+    """Normalize a series containing bool/int/string flags into strict booleans."""
+    return series.apply(_to_bool_value).astype(bool)
+
+
 def _fetch_and_compute(ticker: str, range_ticks_threshold: float = None, vol_pct_threshold: float = None) -> pd.DataFrame:
     """Fetch stock data and compute all indicators with configurable thresholds."""
     # Use session state parameters if available, otherwise fallback to defaults
@@ -122,13 +140,13 @@ def render_stock_detail() -> None:
         
         # Ensure MA_Tight column exists and is boolean
         if "MA_Tight" in filtered_results.columns:
-            filtered_results["MA_Tight"] = filtered_results["MA_Tight"].astype(bool)
+            filtered_results["MA_Tight"] = _to_bool_series(filtered_results["MA_Tight"])
         else:
             filtered_results["MA_Tight"] = False
             
         # Ensure Signal column exists and is boolean
         if "Signal" in filtered_results.columns:
-            filtered_results["Signal"] = filtered_results["Signal"].astype(bool)
+            filtered_results["Signal"] = _to_bool_series(filtered_results["Signal"])
         else:
             filtered_results["Signal"] = False
         
@@ -218,15 +236,15 @@ def render_stock_detail() -> None:
     # Status badges - use values from screener results if available, otherwise compute from raw data
     latest = df.iloc[-1]
     
-    # Try to get from original screener results first (for consistency)
-    if not session_results.empty and ticker in session_results["Ticker"].values:
-        screener_row = session_results[session_results["Ticker"] == ticker].iloc[-1]
-        ma_tight_val = bool(screener_row.get("MA_Tight", False))
-        signal_val = bool(screener_row.get("Signal", False))
-        data_source = "dari hasil screener"
+    # Try to get status from loaded screener/history results first (for consistency)
+    if not results.empty and "Ticker" in results.columns and ticker in results["Ticker"].values:
+        source_row = results[results["Ticker"] == ticker].iloc[-1]
+        ma_tight_val = _to_bool_value(source_row.get("MA_Tight", False))
+        signal_val = _to_bool_value(source_row.get("Signal", False))
+        data_source = "dari hasil screener sesi ini" if not session_results.empty else "dari hasil riwayat"
     else:
         # Compute from raw data if not in screener results
-        ma_tight_val = latest.get("MA_Tight", False)
+        ma_tight_val = _to_bool_value(latest.get("MA_Tight", False))
         min_volume = st.session_state.get("min_volume", 1_000_000)
         signal_val = False
         if "Range_Ticks" in latest and "Vol_Pct" in latest and "Volume" in latest and "MA100" in latest:
