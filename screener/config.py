@@ -1,0 +1,9 @@
+# Thresholds and configuration for the MA Kuncup screener
+
+RANGE_TICKS_THRESHOLD = 6
+VOL_PCT_THRESHOLD = 3.8
+MIN_VOLUME = 1_000_000
+MA_PERIODS = [3, 5, 10, 20, 50]
+MA_TREND_PERIOD = 100
+VOL_ROLLING_PERIOD = 10
+DATA_PERIOD = "1y"
