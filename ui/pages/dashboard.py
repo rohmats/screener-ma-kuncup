@@ -152,7 +152,7 @@ def render_dashboard() -> None:
             use_container_width=True,
         )
 
-        show_signals_only = st.checkbox("Tampilkan hanya sinyal", value=False)
+        show_signals_only = st.checkbox("Tampilkan hanya sinyal", value=True)
 
         run_button = st.button("🔍 Jalankan Screener", use_container_width=True, type="primary")
 
