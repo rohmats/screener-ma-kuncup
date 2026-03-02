@@ -238,7 +238,7 @@ def render_price_chart(df: pd.DataFrame, ticker: str) -> None:
     )
     fig.update_yaxes(showgrid=True, gridcolor="rgba(255,255,255,0.08)")
 
-    st.plotly_chart(fig, use_container_width=True)
+    st.plotly_chart(fig, width='stretch')
 
 
 def render_volume_chart(df: pd.DataFrame, ticker: str) -> None:
