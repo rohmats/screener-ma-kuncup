@@ -190,18 +190,27 @@ def render_stock_detail() -> None:
 
     st.divider()
     
-    # Status badges
+    # Status badges - use values from screener results if available, otherwise compute from raw data
     latest = df.iloc[-1]
-    ma_tight_val = latest.get("MA_Tight", False)
-    min_volume = st.session_state.get("min_volume", 1_000_000)
-    signal_val = False
-    if "Range_Ticks" in latest and "Vol_Pct" in latest and "Volume" in latest and "MA100" in latest:
-        # Compute signal using current parameters
-        signal_val = (
-            bool(ma_tight_val)
-            and latest["Volume"] > min_volume
-            and latest["MA100"] <= latest["Close"]
-        )
+    
+    # Try to get from original screener results first (for consistency)
+    if not session_results.empty and ticker in session_results["Ticker"].values:
+        screener_row = session_results[session_results["Ticker"] == ticker].iloc[-1]
+        ma_tight_val = bool(screener_row.get("MA_Tight", False))
+        signal_val = bool(screener_row.get("Signal", False))
+        data_source = "dari hasil screener"
+    else:
+        # Compute from raw data if not in screener results
+        ma_tight_val = latest.get("MA_Tight", False)
+        min_volume = st.session_state.get("min_volume", 1_000_000)
+        signal_val = False
+        if "Range_Ticks" in latest and "Vol_Pct" in latest and "Volume" in latest and "MA100" in latest:
+            signal_val = (
+                bool(ma_tight_val)
+                and latest["Volume"] > min_volume
+                and latest["MA100"] <= latest["Close"]
+            )
+        data_source = "dihitung ulang dari data terbaru"
 
     col1, col2, col3 = st.columns(3)
     with col1:
@@ -213,6 +222,8 @@ def render_stock_detail() -> None:
     with col3:
         signal_text = "✅ Sinyal Aktif" if signal_val else "❌ Belum Sinyal"
         st.metric("Sinyal Entry", signal_text)
+
+    st.caption(f"ℹ️ Status {data_source}")
 
     st.divider()
 
