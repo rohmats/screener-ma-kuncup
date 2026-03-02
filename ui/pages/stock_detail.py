@@ -92,19 +92,38 @@ def render_stock_detail() -> None:
     st.divider()
     
     if not results.empty and "Ticker" in results.columns:
-        # Apply filters
+        # Prepare results with proper boolean columns
         filtered_results = results.copy()
+        
+        # Ensure MA_Tight column exists and is boolean
+        if "MA_Tight" in filtered_results.columns:
+            filtered_results["MA_Tight"] = filtered_results["MA_Tight"].astype(bool)
+        else:
+            filtered_results["MA_Tight"] = False
+            
+        # Ensure Signal column exists and is boolean
+        if "Signal" in filtered_results.columns:
+            filtered_results["Signal"] = filtered_results["Signal"].astype(bool)
+        else:
+            filtered_results["Signal"] = False
+        
+        # Apply MA filter
         if filter_ma:
-            if "MA Tight" in filter_ma and "Tidak MA Tight" not in filter_ma:
-                filtered_results = filtered_results[filtered_results["MA_Tight"].eq(True)]
-            elif "Tidak MA Tight" in filter_ma and "MA Tight" not in filter_ma:
-                filtered_results = filtered_results[filtered_results["MA_Tight"].eq(False)]
-
+            ma_mask = pd.Series([False] * len(filtered_results), index=filtered_results.index)
+            if "MA Tight" in filter_ma:
+                ma_mask = ma_mask | filtered_results["MA_Tight"].eq(True)
+            if "Tidak MA Tight" in filter_ma:
+                ma_mask = ma_mask | filtered_results["MA_Tight"].eq(False)
+            filtered_results = filtered_results[ma_mask]
+        
+        # Apply Signal filter
         if filter_signal:
-            if "Sinyal Aktif" in filter_signal and "Belum Sinyal" not in filter_signal:
-                filtered_results = filtered_results[filtered_results["Signal"].eq(True)]
-            elif "Belum Sinyal" in filter_signal and "Sinyal Aktif" not in filter_signal:
-                filtered_results = filtered_results[filtered_results["Signal"].eq(False)]
+            signal_mask = pd.Series([False] * len(filtered_results), index=filtered_results.index)
+            if "Sinyal Aktif" in filter_signal:
+                signal_mask = signal_mask | filtered_results["Signal"].eq(True)
+            if "Belum Sinyal" in filter_signal:
+                signal_mask = signal_mask | filtered_results["Signal"].eq(False)
+            filtered_results = filtered_results[signal_mask]
 
         ticker_list = sorted(filtered_results["Ticker"].dropna().unique().tolist())
         
